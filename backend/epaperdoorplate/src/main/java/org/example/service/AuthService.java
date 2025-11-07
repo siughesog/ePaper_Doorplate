@@ -34,7 +34,7 @@ public class AuthService {
         }
 
         // 檢查用戶名是否已存在
-        if (userRepository.findByUsername(request.getUsername()) != null) {
+        if (userRepository.findByUsername(request.getUsername()).isPresent()) {
             return new AuthResponse(null, null, "用戶名已存在");
         }
 
@@ -63,10 +63,13 @@ public class AuthService {
 
     public AuthResponse login(LoginRequest request) {
         // 首先嘗試用username查找
-        User user = userRepository.findByUsername(request.getUsername());
+        Optional<User> userOpt = userRepository.findByUsername(request.getUsername());
+        User user = null;
         
-        // 如果找不到，嘗試用email查找
-        if (user == null) {
+        if (userOpt.isPresent()) {
+            user = userOpt.get();
+        } else {
+            // 如果找不到，嘗試用email查找
             user = userRepository.findAll().stream()
                     .filter(u -> u.getEmail() != null && u.getEmail().equals(request.getUsername()))
                     .findFirst()
@@ -86,7 +89,7 @@ public class AuthService {
     }
 
     public User getUserByUsername(String username) {
-        return userRepository.findByUsername(username);
+        return userRepository.findByUsername(username).orElse(null);
     }
 
     public boolean validateToken(String token) {

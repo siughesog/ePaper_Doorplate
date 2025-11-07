@@ -180,7 +180,7 @@ public class DeviceService {
 
         String deviceId = existingByUnique.map(Device::getDeviceId).orElseGet(() -> generateDeviceId());
 
-        User user = userRepository.findByUsername(username);
+        User user = userRepository.findByUsername(username).orElse(null);
         String userId = user != null ? user.getId() : null;
 
         Device device = existingByUnique.orElseGet(Device::new);
@@ -468,7 +468,7 @@ public class DeviceService {
 
     public Map<String, Object> getUserDevices(String username) {
         Map<String, Object> resp = new HashMap<>();
-        User user = userRepository.findByUsername(username);
+        User user = userRepository.findByUsername(username).orElse(null);
         if (user == null) {
             resp.put("success", false);
             resp.put("message", "user not found");

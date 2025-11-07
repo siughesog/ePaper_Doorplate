@@ -30,7 +30,7 @@ public class HardwareWhitelistController {
         }
         
         String username = authentication.getName();
-        User user = userRepository.findByUsername(username);
+        User user = userRepository.findByUsername(username).orElse(null);
         return user != null && user.isSuperuser();
     }
 
