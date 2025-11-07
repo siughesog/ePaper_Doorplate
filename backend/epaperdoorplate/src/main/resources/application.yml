@@ -18,8 +18,9 @@ spring:
       static-locations: ${SPRING_WEB_RESOURCES_STATIC_LOCATIONS:file:./uploads/}
 
 # 服務器配置
+# Railway 會自動設置 PORT 環境變量，優先使用它
 server:
-  port: ${SERVER_PORT:8080}
+  port: ${PORT:${SERVER_PORT:8080}}
   address: ${SERVER_ADDRESS:0.0.0.0}
   # HTTPS 配置
   # 注意：云端部署时，通常使用平台提供的 SSL（如 Railway/Render）
