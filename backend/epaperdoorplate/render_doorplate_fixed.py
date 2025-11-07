@@ -66,8 +66,24 @@ class DoorplateRenderer:
             if self.default_font:
                 return ImageFont.truetype(self.default_font, size)
             else:
+                # 如果沒有找到字體，嘗試使用系統默認字體
+                # 對於中文，嘗試查找 Noto 或文泉驛字體
+                fallback_fonts = [
+                    "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
+                    "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",
+                    "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
+                ]
+                for font_path in fallback_fonts:
+                    if os.path.exists(font_path):
+                        try:
+                            return ImageFont.truetype(font_path, size)
+                        except:
+                            continue
+                # 最後回退到默認字體（不支持中文）
+                print("警告: 未找到中文字體，中文可能無法正確顯示")
                 return ImageFont.load_default()
-        except:
+        except Exception as e:
+            print(f"字體加載錯誤: {e}")
             return ImageFont.load_default()
     
     def hex_to_rgb(self, hex_color: str) -> Tuple[int, int, int]:
