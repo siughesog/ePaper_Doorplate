@@ -28,36 +28,68 @@ class DoorplateRenderer:
         self.elements_data = []  # 存儲元素數據
         
         # 嘗試載入字體（支持 Windows 和 Linux）
+        # 優先使用支持中文的字體
         try:
-            self.font_paths = [
-                # Windows 字體路徑
+            # 中文字體路徑（優先）
+            chinese_font_paths = [
+                # Linux 中文字體（優先）
+                "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",  # Noto Sans CJK
+                "/usr/share/fonts/truetype/noto/NotoSerifCJK-Regular.ttc",  # Noto Serif CJK
+                "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",  # Noto Sans CJK (OpenType)
+                "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",  # 文泉驛微米黑
+                "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",  # 文泉驛正黑
+                # Windows 中文字體
                 "C:/Windows/Fonts/msyh.ttc",  # 微軟雅黑
                 "C:/Windows/Fonts/simsun.ttc",  # 宋體
                 "C:/Windows/Fonts/simhei.ttf",  # 黑體
-                # Linux 字體路徑
-                "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",  # Noto Sans CJK
-                "/usr/share/fonts/truetype/noto/NotoSerifCJK-Regular.ttc",  # Noto Serif CJK
-                "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",  # DejaVu Sans（備用）
-                "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",  # 文泉驛微米黑
-                "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",  # 文泉驛正黑
-                "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",  # Noto Sans CJK (OpenType)
-                # 系統字體目錄（通用）
+            ]
+            
+            # 備用字體（不支持中文，僅在找不到中文字體時使用）
+            fallback_font_paths = [
+                "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",  # DejaVu Sans
                 "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",  # Liberation Sans
             ]
+            
             self.default_font = None
-            for font_path in self.font_paths:
+            
+            # 首先嘗試加載中文字體
+            for font_path in chinese_font_paths:
                 if os.path.exists(font_path):
                     try:
-                        # 測試字體是否可以正常加載
+                        # 測試字體是否可以正常加載，並測試是否支持中文
                         test_font = ImageFont.truetype(font_path, 12)
-                        self.default_font = font_path
-                        print(f"成功加載字體: {font_path}")
-                        break
+                        # 測試字體是否支持中文字符
+                        test_text = "中"
+                        try:
+                            # 嘗試獲取字符的邊界框，如果成功則說明字體支持中文
+                            bbox = test_font.getbbox(test_text)
+                            if bbox[2] > bbox[0] and bbox[3] > bbox[1]:  # 有寬度和高度
+                                self.default_font = font_path
+                                print(f"✅ 成功加載中文字體: {font_path}")
+                                break
+                        except:
+                            # 如果測試失敗，繼續下一個字體
+                            continue
                     except Exception as e:
-                        print(f"字體加載失敗 {font_path}: {e}")
+                        print(f"⚠️ 字體加載失敗 {font_path}: {e}")
                         continue
+            
+            # 如果沒有找到中文字體，使用備用字體
+            if not self.default_font:
+                print("⚠️ 未找到中文字體，嘗試使用備用字體（可能不支持中文）")
+                for font_path in fallback_font_paths:
+                    if os.path.exists(font_path):
+                        try:
+                            test_font = ImageFont.truetype(font_path, 12)
+                            self.default_font = font_path
+                            print(f"⚠️ 使用備用字體（不支持中文）: {font_path}")
+                            break
+                        except Exception as e:
+                            print(f"⚠️ 備用字體加載失敗 {font_path}: {e}")
+                            continue
+                            
         except Exception as e:
-            print(f"字體初始化錯誤: {e}")
+            print(f"❌ 字體初始化錯誤: {e}")
             self.default_font = None
     
     def get_font(self, size: int) -> ImageFont.FreeTypeFont:
@@ -68,22 +100,26 @@ class DoorplateRenderer:
             else:
                 # 如果沒有找到字體，嘗試使用系統默認字體
                 # 對於中文，嘗試查找 Noto 或文泉驛字體
-                fallback_fonts = [
+                chinese_fonts = [
                     "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
+                    "/usr/share/fonts/truetype/noto/NotoSerifCJK-Regular.ttc",
                     "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",
                     "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
                 ]
-                for font_path in fallback_fonts:
+                for font_path in chinese_fonts:
                     if os.path.exists(font_path):
                         try:
-                            return ImageFont.truetype(font_path, size)
-                        except:
+                            font = ImageFont.truetype(font_path, size)
+                            print(f"✅ 動態加載中文字體: {font_path}")
+                            return font
+                        except Exception as e:
+                            print(f"⚠️ 動態字體加載失敗 {font_path}: {e}")
                             continue
                 # 最後回退到默認字體（不支持中文）
-                print("警告: 未找到中文字體，中文可能無法正確顯示")
+                print("❌ 警告: 未找到中文字體，中文可能無法正確顯示（將顯示為方塊）")
                 return ImageFont.load_default()
         except Exception as e:
-            print(f"字體加載錯誤: {e}")
+            print(f"❌ 字體加載錯誤: {e}")
             return ImageFont.load_default()
     
     def hex_to_rgb(self, hex_color: str) -> Tuple[int, int, int]:
