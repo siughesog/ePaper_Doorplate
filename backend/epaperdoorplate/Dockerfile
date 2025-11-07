@@ -30,7 +30,7 @@ COPY --from=build /app/target/epaperdoorplate-1.0-SNAPSHOT.jar app.jar
 # 复制 Python 脚本和依赖
 # Python 脚本现在与 JAR 文件在同一目录
 COPY render_doorplate_fixed.py /app/render_doorplate_fixed.py
-COPY ../../requirements.txt /app/requirements.txt
+COPY requirements.txt /app/requirements.txt
 
 # 安装 Python 依赖
 RUN pip3 install --no-cache-dir -r /app/requirements.txt
