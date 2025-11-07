@@ -3,14 +3,42 @@ import { validateImageUrl, createSafeImageUrl, SecureStorage } from '../utils/se
 
 class ApiService {
   constructor() {
+    // 讀取環境變量（React 應用必須使用 REACT_APP_ 前綴）
     const envBase = process.env.REACT_APP_API_BASE_URL || process.env.VITE_API_BASE_URL;
-    // 默認使用 HTTP，如果後端啟用了 HTTPS，請通過環境變量設置
-    // 生產環境應該通過環境變量設置，開發環境使用 localhost
-    const resolved = envBase && envBase.trim().length > 0 
-      ? envBase.trim() 
-      : (process.env.NODE_ENV === 'production' ? '' : 'https://localhost:8080');
+    
+    // 調試：檢查環境變量
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔧 API Service 初始化:');
+      console.log('   - REACT_APP_API_BASE_URL:', process.env.REACT_APP_API_BASE_URL);
+      console.log('   - NODE_ENV:', process.env.NODE_ENV);
+    }
+    
+    // 處理環境變量
+    let resolved;
+    if (envBase && envBase.trim().length > 0) {
+      resolved = envBase.trim();
+      // 確保 URL 不以斜杠結尾
+      if (resolved.endsWith('/')) {
+        resolved = resolved.slice(0, -1);
+      }
+    } else {
+      // 如果沒有設置環境變量，根據環境使用默認值
+      if (process.env.NODE_ENV === 'production') {
+        // 生產環境：如果沒有設置，會導致錯誤（應該設置環境變量）
+        console.error('⚠️ 警告: REACT_APP_API_BASE_URL 未設置，API 請求可能失敗');
+        resolved = ''; // 空字符串，會導致請求失敗，提醒設置環境變量
+      } else {
+        // 開發環境：使用 localhost
+        resolved = 'https://localhost:8080';
+      }
+    }
+    
     this.baseURL = resolved;
     this.legacyBaseURL = resolved; // 預設同一個端口
+    
+    if (process.env.NODE_ENV === 'development') {
+      console.log('   - 最終 baseURL:', this.baseURL);
+    }
   }
 
   // 獲取認證headers
@@ -71,10 +99,24 @@ class ApiService {
 
   // 認證相關API
   async login(username, password) {
-    const response = await this.request(`${this.baseURL}/api/auth/login`, {
+    if (!this.baseURL || this.baseURL.trim() === '') {
+      throw new Error('API base URL 未設置。請在 Vercel 環境變量中設置 REACT_APP_API_BASE_URL');
+    }
+    
+    const url = `${this.baseURL}/api/auth/login`;
+    console.log('🔐 登入請求 URL:', url);
+    
+    const response = await this.request(url, {
       method: 'POST',
       body: JSON.stringify({ username, password })
     });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('❌ 登入失敗:', response.status, errorText);
+      throw new Error(`登入失敗: ${response.status} ${errorText}`);
+    }
+    
     return response.json();
   }
 
