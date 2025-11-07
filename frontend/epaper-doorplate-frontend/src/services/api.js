@@ -5,7 +5,10 @@ class ApiService {
   constructor() {
     const envBase = process.env.REACT_APP_API_BASE_URL || process.env.VITE_API_BASE_URL;
     // 默認使用 HTTP，如果後端啟用了 HTTPS，請通過環境變量設置
-    const resolved = envBase && envBase.trim().length > 0 ? envBase.trim() : 'https://localhost:8080';
+    // 生產環境應該通過環境變量設置，開發環境使用 localhost
+    const resolved = envBase && envBase.trim().length > 0 
+      ? envBase.trim() 
+      : (process.env.NODE_ENV === 'production' ? '' : 'https://localhost:8080');
     this.baseURL = resolved;
     this.legacyBaseURL = resolved; // 預設同一個端口
   }
