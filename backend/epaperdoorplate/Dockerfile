@@ -20,6 +20,7 @@ FROM eclipse-temurin:21-jre
 RUN apt-get update && apt-get install -y \
     python3 \
     python3-pip \
+    python3-venv \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -32,8 +33,13 @@ COPY --from=build /app/target/epaperdoorplate-1.0-SNAPSHOT.jar app.jar
 COPY render_doorplate_fixed.py /app/render_doorplate_fixed.py
 COPY requirements.txt /app/requirements.txt
 
-# 安装 Python 依赖
-RUN pip3 install --no-cache-dir -r /app/requirements.txt
+# 创建 Python 虚拟环境并安装依赖
+RUN python3 -m venv /app/venv && \
+    /app/venv/bin/pip install --no-cache-dir --upgrade pip && \
+    /app/venv/bin/pip install --no-cache-dir -r /app/requirements.txt
+
+# 设置环境变量，使 Python 使用虚拟环境
+ENV PATH="/app/venv/bin:$PATH"
 
 # 暴露端口（Railway 会自动设置 PORT 环境变量）
 EXPOSE 8080
