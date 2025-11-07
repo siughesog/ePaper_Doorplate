@@ -27,19 +27,37 @@ class DoorplateRenderer:
         self.draw = ImageDraw.Draw(self.canvas)
         self.elements_data = []  # 存儲元素數據
         
-        # 嘗試載入字體
+        # 嘗試載入字體（支持 Windows 和 Linux）
         try:
             self.font_paths = [
+                # Windows 字體路徑
                 "C:/Windows/Fonts/msyh.ttc",  # 微軟雅黑
                 "C:/Windows/Fonts/simsun.ttc",  # 宋體
                 "C:/Windows/Fonts/simhei.ttf",  # 黑體
+                # Linux 字體路徑
+                "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",  # Noto Sans CJK
+                "/usr/share/fonts/truetype/noto/NotoSerifCJK-Regular.ttc",  # Noto Serif CJK
+                "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",  # DejaVu Sans（備用）
+                "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",  # 文泉驛微米黑
+                "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",  # 文泉驛正黑
+                "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",  # Noto Sans CJK (OpenType)
+                # 系統字體目錄（通用）
+                "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",  # Liberation Sans
             ]
             self.default_font = None
             for font_path in self.font_paths:
                 if os.path.exists(font_path):
-                    self.default_font = font_path
-                    break
-        except:
+                    try:
+                        # 測試字體是否可以正常加載
+                        test_font = ImageFont.truetype(font_path, 12)
+                        self.default_font = font_path
+                        print(f"成功加載字體: {font_path}")
+                        break
+                    except Exception as e:
+                        print(f"字體加載失敗 {font_path}: {e}")
+                        continue
+        except Exception as e:
+            print(f"字體初始化錯誤: {e}")
             self.default_font = None
     
     def get_font(self, size: int) -> ImageFont.FreeTypeFont:

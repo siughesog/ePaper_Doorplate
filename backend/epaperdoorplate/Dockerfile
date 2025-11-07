@@ -16,11 +16,14 @@ RUN mvn clean package -DskipTests
 # 阶段 2：运行时
 FROM eclipse-temurin:21-jre
 
-# 安装 Python 和依赖
+# 安装 Python、依赖和中文字体
 RUN apt-get update && apt-get install -y \
     python3 \
     python3-pip \
     python3-venv \
+    fonts-noto-cjk \
+    fonts-wqy-microhei \
+    fonts-wqy-zenhei \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
