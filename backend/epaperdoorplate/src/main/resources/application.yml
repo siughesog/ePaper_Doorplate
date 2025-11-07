@@ -1,0 +1,61 @@
+spring:
+  data:
+    mongodb:
+      # 使用環境變數，如果未設置則使用預設值
+      uri: ${MONGODB_URI:mongodb://localhost:27017/test_for_Epaper_http_request}
+  security:
+    user:
+      name: ${SPRING_SECURITY_USER_NAME:admin}
+      password: ${SPRING_SECURITY_USER_PASSWORD:admin123}
+  servlet:
+    multipart:
+      # 文件上傳大小限制（使用環境變數）
+      max-file-size: ${SPRING_SERVLET_MULTIPART_MAX_FILE_SIZE:10MB}
+      max-request-size: ${SPRING_SERVLET_MULTIPART_MAX_REQUEST_SIZE:10MB}
+  web:
+    resources:
+      # 靜態資源路徑（使用環境變數）
+      static-locations: ${SPRING_WEB_RESOURCES_STATIC_LOCATIONS:file:./uploads/}
+
+# 服務器配置
+server:
+  port: ${SERVER_PORT:8080}
+  address: ${SERVER_ADDRESS:0.0.0.0}
+  # HTTPS 配置
+  # 注意：云端部署时，通常使用平台提供的 SSL（如 Railway/Render）
+  # 如果使用平台 SSL，设置 SERVER_SSL_ENABLED=false
+  # 如果需要使用自己的证书，设置 SERVER_SSL_ENABLED=true 并提供 keystore.p12
+  ssl:
+    enabled: ${SERVER_SSL_ENABLED:true}
+    # 只有在 enabled=true 时才需要以下配置
+    key-store: ${SERVER_SSL_KEYSTORE:classpath:keystore.p12}
+    key-store-password: ${KEYSTORE_PASSWORD:123456}
+    key-store-type: PKCS12
+    key-alias: ${SERVER_SSL_KEY_ALIAS:tomcat}
+
+# JWT 配置
+jwt:
+  # 使用環境變數，如果未設置則使用預設值（開發環境）
+  # ⚠️ 生產環境必須設置強密鑰！
+  secret: ${JWT_SECRET:mySecretKey123456789012345678901234567890}
+  expiration: ${JWT_EXPIRATION:86400000} # 24小時
+
+# 文件上傳配置
+file:
+  upload-dir: ${FILE_UPLOAD_DIR:uploads}
+
+upload:
+  folder: ${UPLOAD_FOLDER:uploads}
+
+# 存儲配置
+# local: 本地文件系統存儲（開發環境）
+# s3: AWS S3 雲端存儲（生產環境）
+storage:
+  type: ${STORAGE_TYPE:local}
+  local:
+    base-url: ${STORAGE_LOCAL_BASE_URL:}
+  s3:
+    bucket: ${STORAGE_S3_BUCKET:}
+    region: ${STORAGE_S3_REGION:us-east-1}
+    access-key: ${STORAGE_S3_ACCESS_KEY:}
+    secret-key: ${STORAGE_S3_SECRET_KEY:}

@@ -1,0 +1,67 @@
+# Java
+*.class
+*.jar
+*.war
+*.ear
+target/
+.mvn/
+mvnw
+mvnw.cmd
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Build
+build/
+dist/
+*.log
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Uploads and temporary files
+uploads/
+rendered_images/
+*.bmp
+*.bin
+temp_*
+
+# Frontend build
+frontend/epaper-doorplate-frontend/build/
+
+# Keystore (if using)
+*.p12
+*.jks
+keystore.*
+
+# Railway
+.railway/
