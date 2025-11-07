@@ -52,6 +52,18 @@ class ApiService {
 
   // 通用fetch方法
   async request(url, options = {}) {
+    // 驗證 URL 格式
+    if (!url || url.trim() === '') {
+      throw new Error('API URL 為空，請檢查 REACT_APP_API_BASE_URL 環境變量');
+    }
+    
+    // 確保 URL 是完整的（包含協議）
+    let fullUrl = url;
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      console.warn('⚠️ URL 缺少協議，嘗試添加 https://');
+      fullUrl = `https://${url}`;
+    }
+    
     const authHeaders = this.getAuthHeaders();
     const hasBody = options && options.body !== undefined && options.body !== null;
     const isFormData = typeof FormData !== 'undefined' && hasBody && options.body instanceof FormData;
@@ -72,7 +84,9 @@ class ApiService {
     };
 
     try {
-      const response = await fetch(url, config);
+      console.log('📤 API 請求:', fullUrl, options.method || 'GET');
+      const response = await fetch(fullUrl, config);
+      console.log('📥 API 響應:', response.status, response.statusText);
       
       // 如果token過期，清除本地存儲並重定向到登入頁
       if (response.status === 401) {
@@ -83,9 +97,9 @@ class ApiService {
 
       return response;
     } catch (error) {
-      console.error('API請求失敗:', error);
-      console.error('請求URL:', url);
-      console.error('請求配置:', config);
+      console.error('❌ API請求失敗:', error);
+      console.error('   請求URL:', fullUrl);
+      console.error('   請求配置:', config);
       
       // 提供更詳細的錯誤信息
       if (error instanceof TypeError && error.message.includes('fetch')) {
