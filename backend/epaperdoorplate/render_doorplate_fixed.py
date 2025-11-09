@@ -543,11 +543,12 @@ class DoorplateRenderer:
             gray_threshold = 128
             
             # 判斷紅色：R 值高，且 G 和 B 都低（允許一些抗鋸齒誤差）
-            # 紅色判斷條件：
-            # 1. R 明顯高於 G 和 B（R > G + 50 且 R > B + 50）- 處理紅色與白色混合的邊緣
-            # 2. 或者 R > 200 且 G < 100 且 B < 100 - 處理接近純紅色的像素
-            red_mask_condition1 = (pixels[:,:,0] > pixels[:,:,1] + 50) & (pixels[:,:,0] > pixels[:,:,2] + 50) & (pixels[:,:,0] > 150)
-            red_mask_condition2 = (pixels[:,:,0] > 200) & (pixels[:,:,1] < 100) & (pixels[:,:,2] < 100)
+            # 紅色判斷條件（更嚴格）：
+            # 1. 接近純紅色：R > 200 且 G < 100 且 B < 100
+            # 2. 紅色與白色混合的邊緣：R 明顯高於 G 和 B，且 G 和 B 都較低（避免誤判橙色/棕色）
+            #    條件：R > G + 30 且 R > B + 30 且 R > 180 且 G < 120 且 B < 120
+            red_mask_condition1 = (pixels[:,:,0] > 200) & (pixels[:,:,1] < 100) & (pixels[:,:,2] < 100)
+            red_mask_condition2 = (pixels[:,:,0] > pixels[:,:,1] + 30) & (pixels[:,:,0] > pixels[:,:,2] + 30) & (pixels[:,:,0] > 180) & (pixels[:,:,1] < 120) & (pixels[:,:,2] < 120)
             red_mask = red_mask_condition1 | red_mask_condition2
             
             # 對於非紅色像素，根據灰階值判斷黑色或白色
