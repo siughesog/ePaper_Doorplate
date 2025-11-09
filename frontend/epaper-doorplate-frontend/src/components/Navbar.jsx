@@ -2,24 +2,31 @@ import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { User, LogOut, Menu, X, Home, LayoutTemplate, Image, Smartphone, Shield } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
+import { isMobileDevice } from '../utils/deviceDetection';
 
 const Navbar = () => {
   const { user, logout } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
+  const isMobile = isMobileDevice();
 
   const handleLogout = () => {
     logout();
     setIsMenuOpen(false);
   };
 
-  const navItems = [
+  const allNavItems = [
     { path: '/', label: '首頁', icon: Home },
     { path: '/template', label: '模板編輯', icon: LayoutTemplate },
     { path: '/ImageManager', label: '圖片管理', icon: Image },
     { path: '/devices', label: '裝置管理', icon: Smartphone },
     { path: '/hardware-whitelist', label: '硬體白名單', icon: Shield, requireSuperuser: true },
   ];
+
+  // 在移动设备上只显示首页和装置管理
+  const navItems = isMobile 
+    ? allNavItems.filter(item => item.path === '/' || item.path === '/devices')
+    : allNavItems;
 
   return (
     <nav className="bg-white shadow-lg">

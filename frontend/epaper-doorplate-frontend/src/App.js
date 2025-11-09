@@ -4,6 +4,7 @@ import { Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
 import { ToastProvider } from './components/Toast'
 import ProtectedRoute from './components/ProtectedRoute'
+import MobileRestrictedRoute from './components/MobileRestrictedRoute'
 import Navbar from './components/Navbar'
 import TemplateEditor from './TemplateEditor'
 import ImageManager from './ImageManager'
@@ -30,27 +31,37 @@ function App() {
           <Routes>
           <Route path="/" element={
             <ProtectedRoute>
-              <Page />
+              <MobileRestrictedRoute>
+                <Page />
+              </MobileRestrictedRoute>
             </ProtectedRoute>
           } />
           <Route path="/template" element={
             <ProtectedRoute>
-              <TemplateEditor />
+              <MobileRestrictedRoute>
+                <TemplateEditor />
+              </MobileRestrictedRoute>
             </ProtectedRoute>
           } />
           <Route path="/ImageManager" element={
             <ProtectedRoute>
-              <ImageManager />
+              <MobileRestrictedRoute>
+                <ImageManager />
+              </MobileRestrictedRoute>
             </ProtectedRoute>
           } />
           <Route path="/devices" element={
             <ProtectedRoute>
-              <DeviceManager />
+              <MobileRestrictedRoute>
+                <DeviceManager />
+              </MobileRestrictedRoute>
             </ProtectedRoute>
           } />
           <Route path="/hardware-whitelist" element={
             <ProtectedRoute>
-              <HardwareWhitelistManager />
+              <MobileRestrictedRoute>
+                <HardwareWhitelistManager />
+              </MobileRestrictedRoute>
             </ProtectedRoute>
           } />
           </Routes>
