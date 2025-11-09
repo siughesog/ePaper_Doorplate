@@ -1396,7 +1396,7 @@ useEffect(() => {
                         <div className="flex items-center gap-1">
                           {hasImageRefs && (
                             <span className="text-xs text-blue-600 font-medium bg-blue-50 px-2 py-0.5 rounded-full" title="直接引用">
-                              {imageRefs.length} 個直接引用
+                              直接引用({imageRefs.length})
                             </span>
                           )}
                           {hasLibraryItems && (
@@ -1404,7 +1404,7 @@ useEffect(() => {
                               className="text-xs text-purple-600 font-medium bg-purple-50 px-2 py-0.5 rounded-full" 
                               title="被動態圖片庫項目使用"
                             >
-                              {libraryItemsUsingThisImage.length} 個動態圖片庫項目
+                              動態圖片項目({libraryItemsUsingThisImage.length})
                             </span>
                           )}
                         </div>
