@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { MinusCircle, PlusCircle, Download, Upload, FileText, Edit3, Trash2 } from 'lucide-react';
+import { MinusCircle, PlusCircle, Upload, FileText, Edit3, Trash2 } from 'lucide-react';
 import { handleLayoutSubmit } from './handleRequest/handleLayoutSubmit'
 import { handleLayoutDelete } from './handleRequest/handleLayoutDelete'
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -634,7 +634,7 @@ const convertImageSrcToTriColorBase64 = async (
     }
     if (element && element.type === 'dynamicText') {
       setEditingdynamicTextId(element.id);
-      setDynamicTextDefault(element.text || '文字標籤');
+      setDynamicTextDefault(element.text || '動態文字標籤');
       setDynamicTextFontSize(Math.max(20, element.fontSize || 20));
       setDynamicTextColor(element.color || 'black');
       setDynamicTextLetterSpacing(element.letterSpacing || 2);
@@ -1326,17 +1326,6 @@ const saveImageSettings = () => {
       return;
     }
 
-    // Download JSON file
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${exportLayoutName || 'layout-elements'}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-
     // Close dialog
     setShowExportDialog(false);
   };
@@ -1687,8 +1676,7 @@ const saveImageSettings = () => {
             onClick={openExportDialog}
             className="flex items-center justify-center w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-4 px-6 rounded-lg hover:from-indigo-700 hover:to-purple-700 text-sm font-bold shadow-lg transition-all"
           >
-            <Download size={18} className="mr-2" />
-            匯出佈局
+            保存佈局
           </button>
         </div>
       </div>
@@ -1981,7 +1969,7 @@ const saveImageSettings = () => {
       {showExportDialog && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]">
           <div className="bg-white p-8 rounded-xl shadow-2xl w-96 border border-slate-200">
-            <h3 className="text-xl font-bold mb-6 text-slate-800">匯出佈局</h3>
+            <h3 className="text-xl font-bold mb-6 text-slate-800">保存佈局</h3>
             <div className="mb-6">
               <div className="flex items-center justify-between mb-3">
                 <label className="block text-sm font-semibold text-slate-700">
@@ -2019,7 +2007,7 @@ const saveImageSettings = () => {
                 disabled={!exportLayoutName.trim()}
                 className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50 font-semibold shadow-sm transition-all"
               >
-                匯出
+                保存
               </button>
             </div>
           </div>
