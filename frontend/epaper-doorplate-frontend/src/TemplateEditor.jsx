@@ -1872,7 +1872,7 @@ const saveImageSettings = () => {
                                 fontSize: `${fontSize}px`,
                                 lineHeight: `${fontSize}px`,
                                 fontWeight: elem.fontWeight,
-                                //color: elem.color,
+                                color: elem.color || 'black',
                                 textAlign: 'center',
                                 whiteSpace: 'nowrap',
                                 overflow: 'hidden',
@@ -1913,7 +1913,7 @@ const saveImageSettings = () => {
                                   fontSize: `${fontSize}px`,
                                   lineHeight: `${fontSize}px`,
                                   fontWeight: elem.fontWeight,
-                                  //color: elem.color,
+                                  color: elem.color || 'black',
                                   whiteSpace: 'nowrap',
                                   overflow: 'hidden',
                                   pointerEvents: 'none', // 讓鼠標事件穿透到父元素
