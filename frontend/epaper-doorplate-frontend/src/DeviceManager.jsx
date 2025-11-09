@@ -399,14 +399,14 @@ export default function DeviceManager() {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">
-                    激活碼
+                    啟動碼
                   </label>
                   <input
                     type="text"
                     value={bindForm.activationCode}
                     onChange={(e) => setBindForm({...bindForm, activationCode: e.target.value})}
                     className="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="輸入 ESP32 顯示的激活碼"
+                    placeholder="輸入 ESP32 顯示的啟動碼"
                   />
                 </div>
 
@@ -482,7 +482,7 @@ export default function DeviceManager() {
 
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">
-                    刷新間隔（秒，最低 300 秒）
+                    刷新間隔
                   </label>
                   <input
                     type="number"

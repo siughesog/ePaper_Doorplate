@@ -82,11 +82,6 @@ export default function CanvasEditor() {
   const [isImageDuplicate, setIsImageDuplicate] = useState(false);
   const [isEditingImageNew, setIsEditingImageNew] = useState(false);
 
-
-  const [usedKB, setUsedKB] = useState(0);
-  const [percentage, setPercentage] = useState(0);
-  const MAX_KB = 5 * 1024;
-
   const canvasRef = useRef(null);
 
   // 檢查兩個元素是否重疊
@@ -347,19 +342,6 @@ export default function CanvasEditor() {
 
   };
 
-  //   const calculateStorage = () => {
-  //   let total = 0;
-  //   for (let key in sessionStorage) {
-  //     if (sessionStorage.hasOwnProperty(key)) {
-  //       const value = sessionStorage.getItem(key);
-  //       total += key.length + value.length;
-  //     }
-  //   }
-  //   const totalKB = total / 1024; // 轉換成 KB
-  //   const percent = Math.min((totalKB / MAX_KB) * 100, 100);
-  //   setUsedKB(totalKB.toFixed(2));
-  //   setPercentage(percent.toFixed(2));
-  // };
   const deleteCurrentLayout = async () => {
     if (!currentLayoutId || !currentLayoutName) return;
 
@@ -1481,22 +1463,6 @@ const saveImageSettings = () => {
         </div>
 
 
-        <div className="bg-gradient-to-br from-slate-50 to-slate-100 shadow-lg rounded-xl p-4 border border-slate-200">
-          <h2 className="text-lg font-bold mb-3 text-slate-800 text-center">
-            存儲使用量
-          </h2>
-
-          <div className="w-full bg-slate-200 rounded-full h-3 mb-2">
-            <div
-              className="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full transition-all duration-500 shadow-sm"
-              style={{ width: `${percentage}%` }}
-            ></div>
-          </div>
-
-          <p className="text-slate-600 text-center text-sm font-semibold">
-            {usedKB} KB / {MAX_KB} KB ({percentage}%)
-          </p>
-        </div>
 
 
 
