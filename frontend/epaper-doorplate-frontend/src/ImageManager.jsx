@@ -1391,7 +1391,11 @@ useEffect(() => {
                       </div>
                         <div className="flex justify-between items-center mt-1">
                         <span className="text-xs text-slate-500">
-                          {new Date(image.uploadTime).toLocaleDateString()}
+                          {(() => {
+                            const date = new Date(image.uploadTime);
+                            date.setHours(date.getHours() + 8); // 加8小时（UTC+8时区）
+                            return date.toLocaleDateString();
+                          })()}
                         </span>
                         <div className="flex items-center gap-1">
                           {hasImageRefs && (

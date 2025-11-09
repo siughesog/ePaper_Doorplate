@@ -247,11 +247,19 @@ export default function DeviceManager() {
               const formatDate = (dateValue) => {
                 if (!dateValue) return null;
                 
+                // 加8小时（UTC+8时区）
+                const add8Hours = (date) => {
+                  const newDate = new Date(date);
+                  newDate.setHours(newDate.getHours() + 8);
+                  return newDate;
+                };
+                
                 // 如果是数组格式 [year, month, day, hour, minute, second]
                 if (Array.isArray(dateValue)) {
                   try {
                     const [year, month, day, hour = 0, minute = 0, second = 0] = dateValue;
-                    return new Date(year, month - 1, day, hour, minute, second).toLocaleString('zh-TW');
+                    const date = new Date(year, month - 1, day, hour, minute, second);
+                    return add8Hours(date).toLocaleString('zh-TW');
                   } catch (e) {
                     return '格式錯誤';
                   }
@@ -265,7 +273,7 @@ export default function DeviceManager() {
                       // 尝试解析其他格式
                       return dateValue; // 如果无法解析，直接显示原值
                     }
-                    return date.toLocaleString('zh-TW');
+                    return add8Hours(date).toLocaleString('zh-TW');
                   } catch (e) {
                     return dateValue;
                   }
@@ -276,7 +284,7 @@ export default function DeviceManager() {
                   try {
                     const date = new Date(dateValue);
                     if (!isNaN(date.getTime())) {
-                      return date.toLocaleString('zh-TW');
+                      return add8Hours(date).toLocaleString('zh-TW');
                     }
                   } catch (e) {
                     // 忽略错误
