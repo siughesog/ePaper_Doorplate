@@ -46,7 +46,7 @@ export default function CanvasEditor() {
   const [labelTextDirection, setLabelTextDirection] = useState('horizontal');
   const [editingLabelId, setEditingLabelId] = useState(null);
   const [labelText, setLabelText] = useState('');
-  const [labelFontSize, setLabelFontSize] = useState(16);
+  const [labelFontSize, setLabelFontSize] = useState(20);
   const [labelColor, setLabelColor] = useState('#000000');
   const [labelName, setLabelName] = useState('');
   const [isLabelNameDuplicate, setIsLabelNameDuplicate] = useState(false);
@@ -56,7 +56,7 @@ export default function CanvasEditor() {
 
 
   const [dynamicTextDefault, setDynamicTextDefault] = useState('');
-  const [dynamicTextFontSize, setDynamicTextFontSize] = useState(16);
+  const [dynamicTextFontSize, setDynamicTextFontSize] = useState(20);
   const [dynamicTextColor, setDynamicTextColor] = useState('');
   const [DynamicTextName, setDynamicTextName] = useState('');
 
@@ -346,6 +346,7 @@ export default function CanvasEditor() {
     }
 
   };
+
   //   const calculateStorage = () => {
   //   let total = 0;
   //   for (let key in sessionStorage) {
@@ -486,14 +487,32 @@ const convertImageSrcToTriColorBase64 = async (
 
     img.onerror = () => reject(new Error('圖片載入失敗'));
 
-    // 使用apiService統一載入圖片blob
+    // 處理圖片載入
     (async () => {
       try {
-        const blob = await apiService.loadImageBlob(src);
-        const objectUrl = URL.createObjectURL(blob);
-        img.src = objectUrl;
+        // 如果是 public 目錄下的靜態資源（以 / 開頭且不是 API 路徑），直接使用
+        if (src.startsWith('/') && !src.startsWith('/api/') && !src.startsWith('/images/')) {
+          // 直接使用相對路徑（public 目錄下的資源）
+          img.crossOrigin = 'anonymous';
+          img.src = src;
+        } else if (src.startsWith('data:') || src.startsWith('blob:')) {
+          // Base64 或 Blob URL，直接使用
+          img.src = src;
+        } else {
+          // 其他路徑，使用 apiService 載入
+          const blob = await apiService.loadImageBlob(src);
+          const objectUrl = URL.createObjectURL(blob);
+          img.src = objectUrl;
+        }
       } catch (e) {
-        reject(e);
+        // 如果通過 API 載入失敗，嘗試直接使用路徑（可能是靜態資源）
+        if (!src.startsWith('data:') && !src.startsWith('blob:')) {
+          console.warn('API 載入失敗，嘗試直接使用路徑:', src);
+          img.crossOrigin = 'anonymous';
+          img.src = src;
+        } else {
+          reject(e);
+        }
       }
     })();
   });
@@ -529,7 +548,7 @@ const convertImageSrcToTriColorBase64 = async (
                 : undefined,
               imageId: elem.imageId,
               text: elem.text || '文字標籤',
-              fontSize: elem.fontSize || 16,
+              fontSize: Math.max(20, elem.fontSize || 20),
               color: elem.color || 'black',
               srcName: elem.srcName,
               letterSpacing: elem.letterSpacing,
@@ -613,7 +632,7 @@ const convertImageSrcToTriColorBase64 = async (
       setIsEditingLabelNew(isNew);
       setEditingLabelId(element.id);
       setLabelText(element.text || '文字標籤');
-      setLabelFontSize(element.fontSize || 16);
+      setLabelFontSize(Math.max(20, element.fontSize || 20));
       setLabelName(element.name || "New Label");
       setLabelTextDirection(element.textDirection || 'horizontal');
       setShowLabelEditDialog(true);
@@ -634,7 +653,7 @@ const convertImageSrcToTriColorBase64 = async (
     if (element && element.type === 'dynamicText') {
       setEditingdynamicTextId(element.id);
       setDynamicTextDefault(element.text || '文字標籤');
-      setDynamicTextFontSize(element.fontSize || 16);
+      setDynamicTextFontSize(Math.max(20, element.fontSize || 20));
       setDynamicTextColor(element.color || 'black');
       setDynamicTextLetterSpacing(element.letterSpacing || 2);
       setDynamicTextName(element.name || '');
@@ -972,7 +991,7 @@ const saveImageSettings = () => {
         width: 150,
         height: 40,
         //text: '文字標籤',
-        fontSize: 16,
+        fontSize: 20,
         //color: '#000000',
         textDirection: 'horizontal',
         zIndex: getNextZIndex('label')
@@ -1009,7 +1028,7 @@ const saveImageSettings = () => {
         y: 50,
         width: 150,
         height: 40,
-        fontSize: 16,
+        fontSize: 20,
         fontWeight: 'normal',
         text: '',
         textDirection: 'horizontal',
@@ -1750,7 +1769,7 @@ const saveImageSettings = () => {
                     border: activeElement === elem.id ? '2px solid blue' : '1px dashed #ccc'
                   }),
                   ...(elem.type === 'dynamicText' && {
-                    fontSize: `${elem.fontSize || 16}px`,
+                    fontSize: `${Math.max(20, elem.fontSize || 20)}px`,
                     //color: elem.color,
                     fontWeight: elem.fontWeight,
                     backgroundColor: 'transparent',
@@ -1865,7 +1884,7 @@ const saveImageSettings = () => {
                   })()
                 ) : elem.type === 'dynamicText' ? (
                   (() => {
-                    const fontSize = Math.min(elem.fontSize || 16, elem.width || 100, elem.height || 50);
+                    const fontSize = Math.min(Math.max(20, elem.fontSize || 20), elem.width || 100, elem.height || 50);
                     const text = elem.text || '';
                     const isVertical = elem.textDirection === 'vertical';
 
@@ -2128,9 +2147,12 @@ const saveImageSettings = () => {
                   <input
                     type="number"
                     value={labelFontSize}
-                    onChange={(e) => setLabelFontSize(parseInt(e.target.value) || 16)}
+                    onChange={(e) => {
+                      const value = parseInt(e.target.value) || 20;
+                      setLabelFontSize(Math.max(20, value));
+                    }}
                     className="w-full p-4 border border-slate-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    min="8"
+                    min="20"
                     max="72"
                   />
                 </div>
@@ -2203,9 +2225,12 @@ const saveImageSettings = () => {
                   <input
                     type="number"
                     value={dynamicTextFontSize}
-                    onChange={(e) => setDynamicTextFontSize(parseInt(e.target.value) || 16)}
+                    onChange={(e) => {
+                      const value = parseInt(e.target.value) || 20;
+                      setDynamicTextFontSize(Math.max(20, value));
+                    }}
                     className="w-full p-2 border rounded"
-                    min="8"
+                    min="20"
                     max="72"
                   />
                 </div>
