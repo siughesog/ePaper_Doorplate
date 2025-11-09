@@ -1251,14 +1251,10 @@ export default function DynamicConfigPage() {
             
             <div className="flex justify-center w-full">
               <div 
-                className="border border-slate-300 rounded-lg overflow-auto shadow-lg"
+                className="border border-slate-300 rounded-lg overflow-hidden shadow-lg"
                 style={{ 
                   maxWidth: '100%', 
-                  maxHeight: '70vh',
-                  minWidth: '800px',
-                  minHeight: '480px',
-                  width: '800px',
-                  height: '480px'
+                  maxHeight: '70vh'
                 }}
               >
                 <img
@@ -1266,10 +1262,11 @@ export default function DynamicConfigPage() {
                   alt="門牌預覽"
                   style={{ 
                     width: '800px', 
-                    height: '480px',
+                    maxWidth: '100%',
+                    maxHeight: '70vh',
+                    height: 'auto',
                     display: 'block',
-                    minWidth: '800px',
-                    minHeight: '480px'
+                    objectFit: 'contain'
                   }}
                 />
               </div>
@@ -1277,7 +1274,7 @@ export default function DynamicConfigPage() {
             
             <div className="mt-4 text-center">
               <p className="text-sm text-slate-500">
-                這是使用Python渲染器生成的800×480像素門牌圖片（可使用滾輪或觸控滑動查看完整內容）
+                這是使用Python渲染器生成的800×480像素門牌圖片（會根據螢幕大小自動縮放）
               </p>
             </div>
           </div>
