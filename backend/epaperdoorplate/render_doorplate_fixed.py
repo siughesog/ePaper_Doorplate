@@ -531,19 +531,34 @@ class DoorplateRenderer:
             
             print(f"開始轉換 BMP 到 bitmap.bin: {w}x{h}")
             
-            # 直接從 BMP 的 RGB 值判斷顏色，不重新計算灰階
-            # 因為 BMP 已經被渲染成三色了
-            print(f"BMP 像素值範圍: R={pixels[:,:,0].min()}-{pixels[:,:,0].max()}, G={pixels[:,:,1].min()}-{pixels[:,:,1].max()}, B={pixels[:,:,2].min()}-{pixels[:,:,2].max()}")
+            # 計算灰階值（用於處理抗鋸齒）
+            gray = np.dot(pixels[...,:3], [0.299, 0.587, 0.114])
             
-            # 直接根據 RGB 值判斷顏色
-            # 黑色: R=0, G=0, B=0
-            # 紅色: R=255, G=0, B=0  
-            # 白色: R=255, G=255, B=255
-            black_mask = (pixels[:,:,0] == 0) & (pixels[:,:,1] == 0) & (pixels[:,:,2] == 0)
-            red_mask = (pixels[:,:,0] == 255) & (pixels[:,:,1] == 0) & (pixels[:,:,2] == 0)
-            white_mask = (pixels[:,:,0] == 255) & (pixels[:,:,1] == 255) & (pixels[:,:,2] == 255)
+            print(f"BMP 像素值範圍: R={pixels[:,:,0].min()}-{pixels[:,:,0].max()}, G={pixels[:,:,1].min()}-{pixels[:,:,1].max()}, B={pixels[:,:,2].min()}-{pixels[:,:,2].max()}")
+            print(f"灰階值範圍: {gray.min():.2f}-{gray.max():.2f}")
+            
+            # 使用閾值來處理抗鋸齒的灰色像素
+            # 閾值：灰階 < 128 視為黑色，>= 128 視為白色
+            # 對於紅色：R 明顯高於 G 和 B，且 G 和 B 都較低
+            gray_threshold = 128
+            
+            # 判斷紅色：R 值高，且 G 和 B 都低（允許一些抗鋸齒誤差）
+            # 紅色判斷條件：
+            # 1. R 明顯高於 G 和 B（R > G + 50 且 R > B + 50）- 處理紅色與白色混合的邊緣
+            # 2. 或者 R > 200 且 G < 100 且 B < 100 - 處理接近純紅色的像素
+            red_mask_condition1 = (pixels[:,:,0] > pixels[:,:,1] + 50) & (pixels[:,:,0] > pixels[:,:,2] + 50) & (pixels[:,:,0] > 150)
+            red_mask_condition2 = (pixels[:,:,0] > 200) & (pixels[:,:,1] < 100) & (pixels[:,:,2] < 100)
+            red_mask = red_mask_condition1 | red_mask_condition2
+            
+            # 對於非紅色像素，根據灰階值判斷黑色或白色
+            # 黑色：灰階 < 閾值
+            # 白色：灰階 >= 閾值
+            non_red_mask = ~red_mask
+            black_mask = non_red_mask & (gray < gray_threshold)
+            white_mask = non_red_mask & (gray >= gray_threshold)
             
             print(f"分層結果: 黑色={np.sum(black_mask)}, 紅色={np.sum(red_mask)}, 白色={np.sum(white_mask)}")
+            print(f"未分類像素: {h*w - np.sum(black_mask) - np.sum(red_mask) - np.sum(white_mask)}")
             
             black_layer = black_mask.astype(np.uint8)
             red_layer = red_mask.astype(np.uint8)
