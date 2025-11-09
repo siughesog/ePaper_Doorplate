@@ -77,6 +77,7 @@ export default function DynamicConfigPage() {
     if (selectedTemplate) {
       // 保存當前選擇的模板ID到 localStorage
       localStorage.setItem('currentTemplateId', selectedTemplate);
+      
       loadDynamicElements(selectedTemplate);
       // 切換模板時清除舊的預覽結果
       if (renderedImageUrl) {
@@ -594,6 +595,7 @@ export default function DynamicConfigPage() {
         console.error('無法獲取當前用戶ID，請重新登錄');
         return;
       }
+      
       const imageBlob = await apiService.renderDoorplate(selectedTemplate, updatedElements, currentUserId);
       
       // 清理舊的 Blob URL（如果存在）
@@ -1247,20 +1249,35 @@ export default function DynamicConfigPage() {
               <span className="text-sm text-slate-500">800×480 像素</span>
             </div>
             
-            <div className="flex justify-center">
-              <div className="border border-slate-300 rounded-lg overflow-hidden shadow-lg">
+            <div className="flex justify-center w-full">
+              <div 
+                className="border border-slate-300 rounded-lg overflow-auto shadow-lg"
+                style={{ 
+                  maxWidth: '100%', 
+                  maxHeight: '70vh',
+                  minWidth: '800px',
+                  minHeight: '480px',
+                  width: '800px',
+                  height: '480px'
+                }}
+              >
                 <img
                   src={renderedImageUrl}
                   alt="門牌預覽"
-                  className="max-w-full h-auto"
-                  style={{ maxWidth: '800px', maxHeight: '480px' }}
+                  style={{ 
+                    width: '800px', 
+                    height: '480px',
+                    display: 'block',
+                    minWidth: '800px',
+                    minHeight: '480px'
+                  }}
                 />
               </div>
             </div>
             
             <div className="mt-4 text-center">
               <p className="text-sm text-slate-500">
-                這是使用Python渲染器生成的800×480像素門牌圖片
+                這是使用Python渲染器生成的800×480像素門牌圖片（可使用滾輪或觸控滑動查看完整內容）
               </p>
             </div>
           </div>
