@@ -130,6 +130,79 @@ GUEST_MESSAGE_MAX_PER_DEVICE_PER_HOUR=5
 
 ---
 
+### 8. **Email 配置（可選，用於忘記密碼功能）**
+
+```env
+EMAIL_ENABLED=true
+EMAIL_SMTP_HOST=smtp.gmail.com
+EMAIL_SMTP_PORT=587
+EMAIL_SMTP_USERNAME=your-email@gmail.com
+EMAIL_SMTP_PASSWORD=your-app-password
+EMAIL_FROM=your-email@gmail.com
+```
+
+**說明：**
+- `EMAIL_ENABLED` - 是否啟用 Email 發送功能（`true` 或 `false`）
+- `EMAIL_SMTP_HOST` - SMTP 服務器地址
+- `EMAIL_SMTP_PORT` - SMTP 端口（通常為 587 或 465）
+- `EMAIL_SMTP_USERNAME` - SMTP 用戶名（通常是您的 email 地址）
+- `EMAIL_SMTP_PASSWORD` - SMTP 密碼（Gmail 需要使用應用程式密碼）
+- `EMAIL_FROM` - 發送者 email 地址
+
+**常見 SMTP 服務器配置：**
+
+**Gmail:**
+```env
+EMAIL_ENABLED=true
+EMAIL_SMTP_HOST=smtp.gmail.com
+EMAIL_SMTP_PORT=587
+EMAIL_SMTP_USERNAME=your-email@gmail.com
+EMAIL_SMTP_PASSWORD=your-16-char-app-password
+EMAIL_FROM=your-email@gmail.com
+```
+⚠️ **重要：** Gmail 需要使用「應用程式密碼」，不是帳戶密碼。如何獲取：
+1. 登入 Google 帳戶
+2. 前往「安全性」→「兩步驟驗證」
+3. 在「應用程式密碼」中生成一個 16 位密碼
+4. 使用這個密碼作為 `EMAIL_SMTP_PASSWORD`
+
+**Outlook/Hotmail:**
+```env
+EMAIL_ENABLED=true
+EMAIL_SMTP_HOST=smtp-mail.outlook.com
+EMAIL_SMTP_PORT=587
+EMAIL_SMTP_USERNAME=your-email@outlook.com
+EMAIL_SMTP_PASSWORD=your-password
+EMAIL_FROM=your-email@outlook.com
+```
+
+**SendGrid:**
+```env
+EMAIL_ENABLED=true
+EMAIL_SMTP_HOST=smtp.sendgrid.net
+EMAIL_SMTP_PORT=587
+EMAIL_SMTP_USERNAME=apikey
+EMAIL_SMTP_PASSWORD=your-sendgrid-api-key
+EMAIL_FROM=your-verified-email@example.com
+```
+
+**Mailgun:**
+```env
+EMAIL_ENABLED=true
+EMAIL_SMTP_HOST=smtp.mailgun.org
+EMAIL_SMTP_PORT=587
+EMAIL_SMTP_USERNAME=your-mailgun-smtp-username
+EMAIL_SMTP_PASSWORD=your-mailgun-smtp-password
+EMAIL_FROM=your-verified-email@example.com
+```
+
+**⚠️ 注意：**
+- 如果不設置這些環境變數，忘記密碼功能仍可使用，但驗證碼只會顯示在後端控制台（開發模式）
+- 生產環境建議配置真實的 SMTP 服務器
+- 確保 `EMAIL_FROM` 地址是經過驗證的（某些 SMTP 服務要求）
+
+---
+
 ## 📋 完整環境變數清單（複製使用）
 
 在 Railway 項目 → "Variables" 中添加以下環境變數：
@@ -181,6 +254,18 @@ LINE_BOT_WEBHOOK_URL=https://your-project.up.railway.app/api/line/webhook
 # ============================================
 GUEST_MESSAGE_MAX_PER_IP_PER_HOUR=3
 GUEST_MESSAGE_MAX_PER_DEVICE_PER_HOUR=5
+
+# ============================================
+# Email 配置（可選，用於忘記密碼功能）
+# ============================================
+# 如果不設置，忘記密碼驗證碼只會顯示在控制台（開發模式）
+# 生產環境建議配置真實的 SMTP 服務器
+EMAIL_ENABLED=true
+EMAIL_SMTP_HOST=smtp.gmail.com
+EMAIL_SMTP_PORT=587
+EMAIL_SMTP_USERNAME=your-email@gmail.com
+EMAIL_SMTP_PASSWORD=your-app-password
+EMAIL_FROM=your-email@gmail.com
 
 # ============================================
 # 前端 URL（必須，用於 Guest QR Code）

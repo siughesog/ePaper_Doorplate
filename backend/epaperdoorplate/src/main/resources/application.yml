@@ -95,3 +95,37 @@ app:
     max-per-ip-per-hour: ${GUEST_MESSAGE_MAX_PER_IP_PER_HOUR:3}
     # 同一設備在 1 小時內最多留言次數
     max-per-device-per-hour: ${GUEST_MESSAGE_MAX_PER_DEVICE_PER_HOUR:5}
+
+# Email 配置（全部使用環境變數）
+app:
+  email:
+    # 是否啟用 Email 發送功能
+    # 環境變數：EMAIL_ENABLED
+    # 設置為 true 時，需要配置以下 SMTP 相關環境變數
+    enabled: ${EMAIL_ENABLED:false}
+    smtp:
+      # SMTP 服務器地址
+      # 環境變數：EMAIL_SMTP_HOST
+      # 常見 SMTP 服務器：
+      # - Gmail: smtp.gmail.com
+      # - Outlook: smtp-mail.outlook.com
+      # - SendGrid: smtp.sendgrid.net
+      # - Mailgun: smtp.mailgun.org
+      host: ${EMAIL_SMTP_HOST:}
+      # SMTP 端口
+      # 環境變數：EMAIL_SMTP_PORT
+      # 常見端口：
+      # - 587 (TLS/STARTTLS，推薦)
+      # - 465 (SSL)
+      # - 25 (不推薦，可能被防火牆阻擋)
+      port: ${EMAIL_SMTP_PORT:587}
+      # SMTP 用戶名（通常是您的 email 地址）
+      # 環境變數：EMAIL_SMTP_USERNAME
+      username: ${EMAIL_SMTP_USERNAME:}
+      # SMTP 密碼（Gmail 需要使用應用程式密碼，不是帳戶密碼）
+      # 環境變數：EMAIL_SMTP_PASSWORD
+      password: ${EMAIL_SMTP_PASSWORD:}
+    # 發送者 email 地址
+    # 環境變數：EMAIL_FROM
+    # 格式：your-email@example.com 或 "Your Name <your-email@example.com>"
+    from: ${EMAIL_FROM:}

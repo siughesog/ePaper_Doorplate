@@ -8,22 +8,22 @@ import java.util.Random;
 @Service
 public class EmailService {
 
-    @Value("${app.email.enabled:false}")
+    @Value("${EMAIL_ENABLED:false}")
     private boolean emailEnabled;
 
-    @Value("${app.email.smtp.host:}")
+    @Value("${EMAIL_SMTP_HOST:}")
     private String smtpHost;
 
-    @Value("${app.email.smtp.port:587}")
+    @Value("${EMAIL_SMTP_PORT:587}")
     private int smtpPort;
 
-    @Value("${app.email.smtp.username:}")
+    @Value("${EMAIL_SMTP_USERNAME:}")
     private String smtpUsername;
 
-    @Value("${app.email.smtp.password:}")
+    @Value("${EMAIL_SMTP_PASSWORD:}")
     private String smtpPassword;
 
-    @Value("${app.email.from:}")
+    @Value("${EMAIL_FROM:}")
     private String fromEmail;
 
     /**
