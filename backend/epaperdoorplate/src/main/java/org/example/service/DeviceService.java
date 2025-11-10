@@ -157,6 +157,64 @@ public class DeviceService {
         resp.put("alreadyActivated", false);
         resp.put("activation_code", code);
         resp.put("expire_at", ac.getExpireAt().toString());
+        
+        // 嘗試找到並渲染激活碼顯示佈局
+        try {
+            System.out.println("🔄 開始查找激活碼顯示佈局");
+            Optional<org.example.model.DoorplateLayout> layoutOpt = layoutService.findLayoutByUserIdAndName("superUser", "EP");
+            
+            if (layoutOpt.isPresent()) {
+                System.out.println("✅ 找到激活碼顯示佈局 (superUser/EP)");
+                org.example.model.DoorplateLayout layout = layoutOpt.get();
+                List<Map<String, Object>> elements = convertElementStylesToMap(layout.getElements());
+                
+                // 找到 Name="activationCode" 的元素並更新其 text
+                boolean foundActivationCodeElement = false;
+                for (Map<String, Object> element : elements) {
+                    // 同時檢查 "name" 和 "Name" 以確保兼容性
+                    String elementName = (String) element.get("name");
+                    if (elementName == null) {
+                        elementName = (String) element.get("Name");
+                    }
+                    if ("activationCode".equals(elementName)) {
+                        foundActivationCodeElement = true;
+                        element.put("text", code);
+                        System.out.println("✅ 已更新激活碼元素，將 text 設為: " + code);
+                        System.out.println("   元素 ID: " + element.get("id"));
+                        System.out.println("   元素類型: " + element.get("type"));
+                        System.out.println("   元素 Name: " + elementName);
+                        break;
+                    }
+                }
+                
+                if (!foundActivationCodeElement) {
+                    System.out.println("⚠️ 未找到 Name='activationCode' 的元素");
+                }
+                
+                // 渲染門牌並獲取 bin 數據
+                System.out.println("🚀 開始渲染激活碼顯示門牌");
+                DoorplateRendererService.RenderResult result = rendererService.renderDoorplate(elements, layout.getId());
+                byte[] binData = result.getBinData();
+                
+                if (binData != null && binData.length > 0) {
+                    String base64Data = java.util.Base64.getEncoder().encodeToString(binData);
+                    resp.put("binData", base64Data);
+                    resp.put("binSize", binData.length);
+                    System.out.println("✅ 成功生成並返回 bin 數據");
+                    System.out.println("   - 原始大小: " + binData.length + " bytes");
+                    System.out.println("   - Base64 大小: " + base64Data.length() + " 字符");
+                } else {
+                    System.out.println("❌ bin 數據為空或未生成");
+                }
+            } else {
+                System.out.println("⚠️ 未找到激活碼顯示佈局 (superUser/EP)，跳過 binData 生成");
+            }
+        } catch (Exception e) {
+            System.err.println("❌ 處理激活碼顯示佈局失敗: " + e.getMessage());
+            e.printStackTrace();
+            // 不影響激活碼的返回，只是沒有 binData
+        }
+        
         return resp;
     }
 

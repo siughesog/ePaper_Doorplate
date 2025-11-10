@@ -442,6 +442,33 @@ void callActivateAPI(String uniqueId) {
       preferences.putString("expire_at", activationInfo.expire_at);
       preferences.putULong("last_activate_time", millis() / 1000);
       Serial.println("🔐 未激活，儲存激活碼：" + activationInfo.activation_code);
+      
+      // 檢查是否有 binData，如果有則寫入 ePaper
+      bool hasBinData = doc.containsKey("binData");
+      int binSize = doc["binSize"] | 0;
+      
+      if (hasBinData && binSize > 0) {
+        String binData = doc["binData"] | "";
+        if (binData.length() > 0) {
+          Serial.println("🔄 activate 含 binData，開始解碼並顯示到 ePaper");
+          Serial.println("   📊 binSize: " + String(binSize) + " bytes");
+          Serial.println("   📊 Base64 長度: " + String(binData.length()) + " 字符");
+          
+          // 使用流式解碼函數處理 binData
+          int decodedLen = base64DecodeStreaming(binData, binSize);
+          
+          if (decodedLen > 0) {
+            Serial.println("✅ activate 的 binData 已成功顯示到 ePaper");
+            Serial.println("   📊 解碼長度: " + String(decodedLen) + " bytes");
+          } else {
+            Serial.println("❌ activate 的 binData 解碼失敗");
+          }
+        } else {
+          Serial.println("⚠️ activate 的 binData 為空字符串");
+        }
+      } else {
+        Serial.println("ℹ️ activate 回應中沒有 binData");
+      }
     }
   } else {
     Serial.println("❌ activate HTTP 錯誤碼: " + String(httpCode));
