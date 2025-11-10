@@ -593,6 +593,10 @@ public class DeviceService {
                     elementMap.put("blackThreshold", elementStyle.getBlackThreshold());
                     elementMap.put("whiteThreshold", elementStyle.getWhiteThreshold());
                     elementMap.put("contrast", elementStyle.getContrast());
+                    
+                    // 添加 zIndex（如果 ElementStyle 有這個欄位，否則使用預設值）
+                    elementMap.put("zIndex", 1); // 預設值，如果 ElementStyle 有 zIndex 欄位可以從那裡獲取
+                    
                     return elementMap;
                 })
                 .collect(java.util.stream.Collectors.toList());

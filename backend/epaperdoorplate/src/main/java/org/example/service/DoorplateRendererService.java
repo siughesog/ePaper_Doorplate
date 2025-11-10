@@ -125,6 +125,17 @@ public class DoorplateRendererService {
         try {
             System.out.println("開始渲染門牌，layoutId: " + layoutId);
             System.out.println("Python腳本路徑: " + PYTHON_SCRIPT_PATH);
+            System.out.println("📥 renderDoorplate 收到 " + elements.size() + " 個元素");
+            
+            // 檢查是否有 guestQRCode 元素
+            for (Map<String, Object> element : elements) {
+                if ("guestQRCode".equals(element.get("type"))) {
+                    System.out.println("🔍 在 renderDoorplate 中找到 guestQRCode 元素");
+                    System.out.println("   元素 ID: " + element.get("id"));
+                    System.out.println("   元素所有鍵: " + element.keySet());
+                    System.out.println("   Token: " + element.get("guestQRCodeToken"));
+                }
+            }
             
             // 檢查Python腳本是否存在
             File pythonScript = new File(PYTHON_SCRIPT_PATH);
