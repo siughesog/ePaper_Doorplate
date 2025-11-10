@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { User, LogOut, Menu, X, Home, LayoutTemplate, Image, Smartphone, Shield } from 'lucide-react';
+import { User, LogOut, Menu, X, Home, LayoutTemplate, Image, Smartphone, Shield, Settings } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { isMobileDevice } from '../utils/deviceDetection';
 
@@ -20,6 +20,7 @@ const Navbar = () => {
     { path: '/template', label: '模板編輯', icon: LayoutTemplate },
     { path: '/ImageManager', label: '圖片管理', icon: Image },
     { path: '/devices', label: '裝置管理', icon: Smartphone },
+    { path: '/settings', label: '設定', icon: Settings },
     { path: '/hardware-whitelist', label: '硬體白名單', icon: Shield, requireSuperuser: true },
   ];
 

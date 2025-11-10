@@ -15,6 +15,12 @@ import io
 import numpy as np
 from typing import List, Dict, Any, Tuple
 import urllib3
+try:
+    import qrcode
+    QRCODE_AVAILABLE = True
+except ImportError:
+    QRCODE_AVAILABLE = False
+    print("警告: qrcode 庫未安裝，Guest QR Code 功能將不可用")
 
 # 禁用SSL警告（僅用於本地開發環境）
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -463,6 +469,65 @@ class DoorplateRenderer:
         font = self.get_font(12)
         self.draw.text((x + 5, y + height - 20), content, font=font, fill='black')
     
+    def render_guest_qr_code_element(self, element: Dict[str, Any]) -> None:
+        """渲染 Guest QR Code 元素（真正的 QR code）"""
+        if not QRCODE_AVAILABLE:
+            print("❌ qrcode 庫未安裝，無法生成 Guest QR Code")
+            x = int(element.get('x', 0))
+            y = int(element.get('y', 0))
+            width = int(element.get('width', 150))
+            height = int(element.get('height', 150))
+            self.draw.rectangle([x, y, x + width, y + height], outline='red', width=2)
+            self.draw.text((x + 5, y + 5), "QR CODE\nNOT AVAILABLE", fill='red')
+            return
+        
+        x = int(element.get('x', 0))
+        y = int(element.get('y', 0))
+        # Guest QR Code 固定大小（150x150 或以下）
+        width = min(int(element.get('width', 150)), 150)
+        height = min(int(element.get('height', 150)), 150)
+        
+        # 從元素中獲取 token
+        token = element.get('guestQRCodeToken', '')
+        if not token:
+            print("❌ Guest QR Code 元素缺少 token")
+            self.draw.rectangle([x, y, x + width, y + height], outline='red', width=2)
+            self.draw.text((x + 5, y + 5), "NO TOKEN", fill='red')
+            return
+        
+        # 從環境變數獲取 API 基礎 URL
+        api_base_url = os.environ.get('API_BASE_URL', 'http://127.0.0.1:8080')
+        
+        # 構建 QR code URL
+        qr_url = f"{api_base_url}/guest/message?token={token}"
+        print(f"生成 Guest QR Code URL: {qr_url}")
+        
+        try:
+            # 創建 QR code
+            qr = qrcode.QRCode(
+                version=1,
+                error_correction=qrcode.constants.ERROR_CORRECT_L,
+                box_size=10,
+                border=2,
+            )
+            qr.add_data(qr_url)
+            qr.make(fit=True)
+            
+            # 生成 QR code 圖片（黑白）
+            qr_img = qr.make_image(fill_color="black", back_color="white")
+            
+            # 調整大小到指定尺寸
+            qr_img = qr_img.resize((width, height), Image.Resampling.LANCZOS)
+            
+            # 將 QR code 繪製到畫布上
+            self.canvas.paste(qr_img, (x, y))
+            print(f"✅ Guest QR Code 已繪製到位置 ({x}, {y}), 大小 {width}x{height}")
+            
+        except Exception as e:
+            print(f"❌ 生成 Guest QR Code 失敗: {e}")
+            self.draw.rectangle([x, y, x + width, y + height], outline='red', width=2)
+            self.draw.text((x + 5, y + 5), "QR ERROR", fill='red')
+    
     def render_barcode_element(self, element: Dict[str, Any]) -> None:
         """渲染條碼元素"""
         x = int(element.get('x', 0))
@@ -492,6 +557,9 @@ class DoorplateRenderer:
                 elif element_type in ['image', 'dynamicImage']:
                     print(f"渲染圖片元素: {element.get('content', '')}")
                     self.render_image_element(element)
+                elif element_type == 'guestQRCode':
+                    print(f"渲染 Guest QR Code 元素")
+                    self.render_guest_qr_code_element(element)
                 elif element_type == 'qr':
                     self.render_qr_element(element)
                 elif element_type == 'barcode':

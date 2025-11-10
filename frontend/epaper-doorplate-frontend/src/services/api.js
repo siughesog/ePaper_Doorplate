@@ -528,6 +528,67 @@ class ApiService {
     const response = await this.request(`${this.baseURL}/api/hardware-whitelist/check?uniqueId=${encodeURIComponent(uniqueId)}`);
     return response.json();
   }
+
+  // 設定相關API
+  async getSettings() {
+    const response = await this.request(`${this.baseURL}/api/settings`);
+    return response.json();
+  }
+
+  async updateSettings(settings) {
+    const response = await this.request(`${this.baseURL}/api/settings`, {
+      method: 'PUT',
+      body: JSON.stringify(settings)
+    });
+    return response.json();
+  }
+
+  // Line Bot 相關API
+  async getLineBotInfo() {
+    const response = await this.request(`${this.baseURL}/api/line/info`, {
+      method: 'GET'
+    });
+    return response.json();
+  }
+
+  async generateLineVerificationCode() {
+    const response = await this.request(`${this.baseURL}/api/line/generate-verification-code`, {
+      method: 'POST'
+    });
+    return response.json();
+  }
+
+  async unbindLine() {
+    const response = await this.request(`${this.baseURL}/api/line/unbind`, {
+      method: 'POST'
+    });
+    return response.json();
+  }
+
+  // Guest 留言相關API（公開，不需要認證）
+  async getGuestMessagePageSettings(token) {
+    const response = await fetch(`${this.baseURL}/api/guest/message-page?token=${encodeURIComponent(token)}`, {
+      method: 'GET',
+      credentials: 'include'
+    });
+    return response.json();
+  }
+
+  async submitGuestMessage(token, message) {
+    const formData = new URLSearchParams();
+    formData.append('token', token);
+    formData.append('message', message);
+    
+    const response = await fetch(`${this.baseURL}/api/guest/message`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: formData,
+      credentials: 'include'
+    });
+    return response.json();
+  }
 }
 
 // 創建單例實例

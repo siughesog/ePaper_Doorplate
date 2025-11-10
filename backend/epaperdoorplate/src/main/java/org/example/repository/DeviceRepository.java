@@ -10,6 +10,7 @@ public interface DeviceRepository extends MongoRepository<Device, String> {
     Optional<Device> findByDeviceId(String deviceId);
     Optional<Device> findByUniqueId(String uniqueId);
     List<Device> findByUserIdAndUnboundFalse(String userId);
+    Optional<Device> findByGuestQRCodeToken(String token);
 }
 
 

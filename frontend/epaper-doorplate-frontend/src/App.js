@@ -12,6 +12,8 @@ import DeviceManager from './DeviceManager'
 import HardwareWhitelistManager from './HardwareWhitelistManager'
 import TokenExpiryWarning from './components/TokenExpiryWarning'
 import Page from './Page'
+import Settings from './Settings'
+import GuestMessage from './GuestMessage'
 import db from './db'
 
 function App() {
@@ -64,6 +66,14 @@ function App() {
               </MobileRestrictedRoute>
             </ProtectedRoute>
           } />
+          <Route path="/settings" element={
+            <ProtectedRoute>
+              <MobileRestrictedRoute>
+                <Settings />
+              </MobileRestrictedRoute>
+            </ProtectedRoute>
+          } />
+          <Route path="/guest/message" element={<GuestMessage />} />
           </Routes>
         </div>
       </ToastProvider>

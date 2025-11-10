@@ -203,6 +203,11 @@ public class DeviceService {
         }
         device.setUpdatedAt(now);
 
+        // 生成 Guest QR Code Token（如果還沒有）
+        if (device.getGuestQRCodeToken() == null || device.getGuestQRCodeToken().isEmpty()) {
+            device.setGuestQRCodeToken(UUID.randomUUID().toString());
+        }
+
         deviceRepository.save(device);
 
         // 綁定成功後，可以刪除此激活碼避免重複使用
@@ -338,6 +343,17 @@ public class DeviceService {
                 
                 org.example.model.DoorplateLayout layout = layoutOpt.get();
                 List<Map<String, Object>> elements = convertElementStylesToMap(layout.getElements());
+                
+                // 為 guestQRCode 元素添加 token
+                String guestQRCodeToken = device.getGuestQRCodeToken();
+                if (guestQRCodeToken != null && !guestQRCodeToken.isEmpty()) {
+                    for (Map<String, Object> element : elements) {
+                        if ("guestQRCode".equals(element.get("type"))) {
+                            element.put("guestQRCodeToken", guestQRCodeToken);
+                            System.out.println("已為 Guest QR Code 元素添加 token");
+                        }
+                    }
+                }
                 
                 // 渲染門牌（直接返回數據，不保存文件）
                 DoorplateRendererService.RenderResult result = rendererService.renderDoorplate(elements, device.getCurrentTemplateId());

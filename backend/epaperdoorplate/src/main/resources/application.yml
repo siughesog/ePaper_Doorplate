@@ -68,3 +68,30 @@ storage:
     region: ${STORAGE_S3_REGION:us-east-1}
     access-key: ${STORAGE_S3_ACCESS_KEY:}
     secret-key: ${STORAGE_S3_SECRET_KEY:}
+
+# Line Bot 配置（全部使用環境變數）
+line:
+  bot:
+    # Line Bot Channel Secret（從 Line Developers Console 獲取）
+    # 環境變數：LINE_BOT_CHANNEL_SECRET
+    channel-secret: ${LINE_BOT_CHANNEL_SECRET:}
+    # Line Bot Channel Access Token（從 Line Developers Console 獲取）
+    # 環境變數：LINE_BOT_CHANNEL_ACCESS_TOKEN
+    channel-access-token: ${LINE_BOT_CHANNEL_ACCESS_TOKEN:}
+    # Line Bot ID（用於生成加入好友連結，格式：@bot-id，不包含 @ 符號）
+    # 環境變數：LINE_BOT_BOT_ID
+    # 例如：如果 Bot ID 是 @abc123，則設置為 abc123
+    bot-id: ${LINE_BOT_BOT_ID:}
+    # Line Bot Webhook URL（您的後端 webhook 端點）
+    # 環境變數：LINE_BOT_WEBHOOK_URL
+    # 格式：https://yourdomain.com/api/line/webhook
+    # 注意：需要在 Line Developers Console 中設置此 URL
+    webhook-url: ${LINE_BOT_WEBHOOK_URL:}
+
+# Guest 訊息防濫用配置
+app:
+  guest-message:
+    # 同一 IP 地址在 1 小時內最多留言次數
+    max-per-ip-per-hour: ${GUEST_MESSAGE_MAX_PER_IP_PER_HOUR:3}
+    # 同一設備在 1 小時內最多留言次數
+    max-per-device-per-hour: ${GUEST_MESSAGE_MAX_PER_DEVICE_PER_HOUR:5}

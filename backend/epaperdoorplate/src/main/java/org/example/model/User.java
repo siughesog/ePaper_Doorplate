@@ -43,4 +43,14 @@ public class User {
     private LocalDateTime updatedAt;
     private boolean enabled = true;
     private boolean isSuperuser = false; // 超級用戶標記
+
+    // Line Bot 相關欄位
+    private String lineUserId; // Line User ID
+    private boolean lineBound = false; // 是否已綁定 Line Bot
+
+    // Guest 訊息相關設定
+    private boolean acceptGuestMessages = true; // 是否接受 guest 訊息
+    private String guestMessageWelcomeText; // Guest 留言頁面歡迎文字
+    private String guestMessageHintText; // Guest 留言頁面提示文字
+    private String guestMessageSubmitText; // Guest 留言頁面提交按鈕文字
 }

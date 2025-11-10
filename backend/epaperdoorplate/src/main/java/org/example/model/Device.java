@@ -54,6 +54,9 @@ public class Device {
     
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime updatedAt;
+
+    // Guest QR Code 相關
+    private String guestQRCodeToken; // Guest QR Code 的 token（用於生成 QR code URL）
 }
 
 

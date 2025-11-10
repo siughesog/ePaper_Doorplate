@@ -16,6 +16,7 @@ const elementTypes = [
   { id: 'dynamicImage', name: '動態圖片' },
   { id: "image", name: "圖片" },
   { id: "label", name: "文字標籤" },
+  { id: "guestQRCode", name: "訪客 QR Code" },
 ];
 
 export default function CanvasEditor() {
@@ -996,6 +997,41 @@ const saveImageSettings = () => {
         height: newElement.height
       });
       openLabelEditDialog(newElement, true)
+    } else if (type.id === 'guestQRCode') {
+      // 檢查是否已經存在 guestQRCode 元素
+      if (elements.some(elem => elem.type === 'guestQRCode')) {
+        toast.error('每個模板只能有一個訪客 QR Code');
+        return;
+      }
+
+      // 新增 Guest QR Code 元素（固定大小 150x150）
+      const newElement = {
+        id: `elem-${Date.now()}`,
+        type: 'guestQRCode',
+        name: '訪客 QR Code',
+        x: 50,
+        y: 50,
+        width: 150, // 固定大小
+        height: 150, // 固定大小
+        zIndex: getNextZIndex('guestQRCode')
+      };
+
+      // 找到不重疊的位置
+      const position = findNonOverlappingPosition(newElement);
+      newElement.x = position.x;
+      newElement.y = position.y;
+
+      const newElements = [...elements, newElement];
+      setElements(newElements.sort((a, b) => (a.zIndex || 1) - (b.zIndex || 1)));
+      setActiveElement(newElement.id);
+
+      // Initialize edit values
+      setEditValues({
+        x: newElement.x,
+        y: newElement.y,
+        width: newElement.width,
+        height: newElement.height
+      });
     } else {
       // Check if element already exists
       if (elements.some(elem => elem.type === type.id && type.id != 'image')) {
@@ -1078,11 +1114,15 @@ const saveImageSettings = () => {
     const offsetX = e.clientX - rect.left;
     const offsetY = e.clientY - rect.top;
 
+    const activeElem = elements.find(elem => elem.id === id);
+    const isGuestQRCode = activeElem && activeElem.type === 'guestQRCode';
+    
     const isNearResizeHandle =
       rect.width - offsetX < 20 &&
       rect.height - offsetY < 20;
 
-    if (isNearResizeHandle) {
+    // Guest QR Code 元素不能調整大小
+    if (isNearResizeHandle && !isGuestQRCode) {
       setIsResizing(true);
     } else {
       setIsDragging(true);
@@ -1150,6 +1190,11 @@ const saveImageSettings = () => {
           }));
         }
       } else if (state.isResizing) {
+        // Guest QR Code 元素不能調整大小
+        if (activeElem.type === 'guestQRCode') {
+          return;
+        }
+        
         const deltaX = e.clientX - state.startPos.x;
         const deltaY = e.clientY - state.startPos.y;
 
@@ -1244,15 +1289,15 @@ const saveImageSettings = () => {
   const applyPropertyChanges = () => {
     if (!activeElement) return;
 
+    const activeElem = elements.find(elem => elem.id === activeElement);
+    if (!activeElem) return;
+
     const boundedValues = {
       x: Math.max(0, Math.min(800 - editValues.width, editValues.x)),
       y: Math.max(0, Math.min(480 - editValues.height, editValues.y)),
-      width: Math.max(50, Math.min(800 - editValues.x, editValues.width)),
-      height: Math.max(30, Math.min(480 - editValues.y, editValues.height))
+      width: activeElem.type === 'guestQRCode' ? 150 : Math.max(50, Math.min(800 - editValues.x, editValues.width)),
+      height: activeElem.type === 'guestQRCode' ? 150 : Math.max(30, Math.min(480 - editValues.y, editValues.height))
     };
-
-    const activeElem = elements.find(elem => elem.id === activeElement);
-    if (!activeElem) return;
 
     // 檢查位置變更是否會造成不允許的重疊
     if (!checkMoveCollision(activeElem, boundedValues.x, boundedValues.y)) {
@@ -1602,7 +1647,8 @@ const saveImageSettings = () => {
                   type="number"
                   value={Math.round(editValues.width || 0)}
                   onChange={(e) => handlePropertyChange('width', e.target.value)}
-                  className="w-full p-3 border border-slate-300 rounded-lg text-sm bg-white shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  disabled={getActiveElementData()?.type === 'guestQRCode'}
+                  className="w-full p-3 border border-slate-300 rounded-lg text-sm bg-white shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                 />
               </div>
               <div>
@@ -1611,7 +1657,8 @@ const saveImageSettings = () => {
                   type="number"
                   value={Math.round(editValues.height || 0)}
                   onChange={(e) => handlePropertyChange('height', e.target.value)}
-                  className="w-full p-3 border border-slate-300 rounded-lg text-sm bg-white shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  disabled={getActiveElementData()?.type === 'guestQRCode'}
+                  className="w-full p-3 border border-slate-300 rounded-lg text-sm bg-white shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                 />
               </div>
             </div>
@@ -1941,12 +1988,18 @@ const saveImageSettings = () => {
                       尚未設定圖片
                     </div>
                   )
+                ) : elem.type === 'guestQRCode' ? (
+                  <div className="w-full h-full flex flex-col items-center justify-center bg-white border-2 border-dashed border-blue-400 text-blue-600">
+                    <div className="text-2xl mb-2">📱</div>
+                    <div className="text-xs font-semibold text-center px-2">訪客 QR Code</div>
+                    <div className="text-xs text-gray-500 mt-1">位置標記</div>
+                  </div>
                 ) : (
                   elem.name
                 )}
 
-                {/* Resize handle */}
-                {activeElement === elem.id && (
+                {/* Resize handle - Guest QR Code 不顯示 */}
+                {activeElement === elem.id && elem.type !== 'guestQRCode' && (
                   <div className="absolute bottom-0 right-0 w-4 h-4 bg-blue-600 cursor-se-resize rounded-tl-lg shadow-sm"></div>
                 )}
               </div>
