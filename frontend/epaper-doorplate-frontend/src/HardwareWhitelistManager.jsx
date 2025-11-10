@@ -151,10 +151,11 @@ export default function HardwareWhitelistManager() {
           </div>
           <button
             onClick={() => handleRemoveFromWhitelist(item.uniqueId)}
-            className="p-2 text-slate-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            className="flex items-center space-x-1 px-3 py-2 text-sm text-red-600 hover:text-white hover:bg-red-600 border border-red-300 rounded-lg transition-colors"
             title="從白名單移除"
           >
             <Trash2 className="w-4 h-4" />
+            <span>刪除</span>
           </button>
         </div>
       </div>
@@ -207,8 +208,26 @@ export default function HardwareWhitelistManager() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* 狀態訊息 */}
         {statusMessage && (
-          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <p className="text-blue-800">{statusMessage}</p>
+          <div className={`mb-6 p-4 rounded-lg border ${
+            statusMessage.includes('成功') || statusMessage.includes('已')
+              ? 'bg-green-50 border-green-200'
+              : statusMessage.includes('失敗') || statusMessage.includes('錯誤')
+              ? 'bg-red-50 border-red-200'
+              : 'bg-blue-50 border-blue-200'
+          }`}>
+            <div className="flex items-center space-x-2">
+              {statusMessage.includes('成功') || statusMessage.includes('已') ? (
+                <CheckCircle className="w-5 h-5 text-green-600" />
+              ) : statusMessage.includes('失敗') || statusMessage.includes('錯誤') ? (
+                <XCircle className="w-5 h-5 text-red-600" />
+              ) : null}
+              <p className={`
+                ${statusMessage.includes('成功') || statusMessage.includes('已') ? 'text-green-800' : ''}
+                ${statusMessage.includes('失敗') || statusMessage.includes('錯誤') ? 'text-red-800' : 'text-blue-800'}
+              `}>
+                {statusMessage}
+              </p>
+            </div>
           </div>
         )}
 

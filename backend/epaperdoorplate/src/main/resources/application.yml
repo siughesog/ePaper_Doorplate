@@ -8,9 +8,9 @@ spring:
       # mongodb://username:password@cluster.mongodb.net:27017/database?ssl=true&retryWrites=true&w=majority
       uri: ${MONGODB_URI:mongodb://localhost:27017/test_for_Epaper_http_request}
       # MongoDB SSL 配置（如果 URI 中未包含 SSL 參數，可以通過以下配置啟用）
-      # ssl:
-      #   enabled: true
-      #   invalid-host-name-allowed: false
+      #ssl:
+         #enabled: true
+         #invalid-host-name-allowed: false
   security:
     user:
       name: ${SPRING_SECURITY_USER_NAME:admin}

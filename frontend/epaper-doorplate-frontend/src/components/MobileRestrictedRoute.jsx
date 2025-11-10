@@ -23,3 +23,5 @@ const MobileRestrictedRoute = ({ children }) => {
 
 export default MobileRestrictedRoute;
 
+
+

@@ -33,8 +33,16 @@ char* url_getBitmap = "https://your-domain.com:8080/bitmap1";
 **选项 B：使用 IP 地址（开发环境）**
 ```cpp
 // 使用 IP，跳过证书验证
-char* url_getBitmap = "https://10.236.124.201:8080/bitmap1";
+const char* api_base_url = "https://10.236.124.201:8080";
 client.setInsecure();  // 跳过验证
+```
+
+**选项 C：使用 Railway 生产环境（当前配置）**
+```cpp
+// 使用 Railway 域名，使用标准 HTTPS 证书
+const char* api_base_url = "https://epaperdoorplate-production.up.railway.app";
+// 可以移除 setInsecure() 以验证证书（推荐）
+// 或保留 setInsecure() 以兼容所有情况
 ```
 
 ### 3. 证书验证方法
