@@ -159,34 +159,9 @@ public class SettingsController {
             }
 
             User user = userOpt.get();
-            boolean usernameChanged = false;
             boolean passwordChanged = false;
             
-            // 更新用戶名
-            if (accountData.containsKey("username")) {
-                String newUsername = (String) accountData.get("username");
-                if (newUsername != null && !newUsername.trim().isEmpty() && !newUsername.equals(user.getUsername())) {
-                    // 檢查新用戶名是否已存在
-                    Optional<User> existingUser = userRepository.findByUsername(newUsername);
-                    if (existingUser.isPresent() && !existingUser.get().getId().equals(user.getId())) {
-                        Map<String, Object> response = new HashMap<>();
-                        response.put("success", false);
-                        response.put("message", "用戶名已被使用");
-                        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
-                    }
-                    
-                    // 驗證用戶名長度
-                    if (newUsername.length() < 3 || newUsername.length() > 20) {
-                        Map<String, Object> response = new HashMap<>();
-                        response.put("success", false);
-                        response.put("message", "用戶名長度必須在3-20個字符之間");
-                        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
-                    }
-                    
-                    user.setUsername(newUsername);
-                    usernameChanged = true;
-                }
-            }
+            // 注意：用戶名不可修改，已移除修改用戶名的功能
             
             // 更新電子郵件
             if (accountData.containsKey("email")) {
@@ -247,7 +222,6 @@ public class SettingsController {
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("message", "帳戶資訊已更新");
-            response.put("usernameChanged", usernameChanged);
             response.put("passwordChanged", passwordChanged);
             
             return ResponseEntity.ok(response);

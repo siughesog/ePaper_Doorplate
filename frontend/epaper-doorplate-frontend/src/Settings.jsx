@@ -174,9 +174,8 @@ export default function Settings() {
       setSavingAccount(true);
       const updateData = {};
       
-      if (accountData.username !== settings.username) {
-        updateData.username = accountData.username;
-      }
+      // 用戶名不可修改，已移除
+      
       if (accountData.email !== settings.email) {
         updateData.email = accountData.email;
       }
@@ -195,23 +194,15 @@ export default function Settings() {
       if (result.success) {
         toast.success(result.message || '帳戶資訊已更新');
         
-        // 如果用戶名改變，需要重新登入
-        if (result.usernameChanged) {
-          toast.info('用戶名已更改，請重新登入');
-          setTimeout(() => {
-            logout();
-          }, 2000);
-        } else {
-          // 重新載入設定
-          await loadSettings();
-          // 清空密碼欄位
-          setAccountData(prev => ({
-            ...prev,
-            currentPassword: '',
-            newPassword: '',
-            confirmPassword: ''
-          }));
-        }
+        // 重新載入設定
+        await loadSettings();
+        // 清空密碼欄位
+        setAccountData(prev => ({
+          ...prev,
+          currentPassword: '',
+          newPassword: '',
+          confirmPassword: ''
+        }));
       } else {
         toast.error(result.message || '更新帳戶資訊失敗');
       }
@@ -280,13 +271,12 @@ export default function Settings() {
               <input
                 type="text"
                 value={accountData.username}
-                onChange={(e) => setAccountData(prev => ({ ...prev, username: e.target.value }))}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                disabled
+                readOnly
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg bg-slate-100 text-slate-600 cursor-not-allowed"
                 placeholder="用戶名"
-                minLength={3}
-                maxLength={20}
               />
-              <p className="text-xs text-slate-500 mt-1">用戶名長度必須在3-20個字符之間</p>
+              <p className="text-xs text-slate-500 mt-1">用戶名無法修改</p>
             </div>
 
             <div>
