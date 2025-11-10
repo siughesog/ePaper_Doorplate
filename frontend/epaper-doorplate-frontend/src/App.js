@@ -1,7 +1,7 @@
 import './App.css'
 import React, { useEffect } from 'react'
 import { Routes, Route, useLocation } from 'react-router-dom'
-import { AuthProvider } from './contexts/AuthContext'
+import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { ToastProvider } from './components/Toast'
 import ProtectedRoute from './components/ProtectedRoute'
 import MobileRestrictedRoute from './components/MobileRestrictedRoute'
@@ -19,13 +19,19 @@ import db from './db'
 
 function AppContent() {
   const location = useLocation();
+  const { user, loading } = useAuth();
   const isGuestPage = location.pathname.startsWith('/guest');
   const isForgotPasswordPage = location.pathname === '/forgot-password';
+  
+  // 需要認證的路徑列表
+  const protectedPaths = ['/', '/template', '/ImageManager', '/devices', '/hardware-whitelist', '/settings'];
+  const isProtectedPath = protectedPaths.includes(location.pathname);
+  const isLoginPage = isProtectedPath && !user && !loading; // 在需要認證的路徑上但用戶未登入
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {!isGuestPage && !isForgotPasswordPage && <Navbar />}
-      {!isGuestPage && !isForgotPasswordPage && <TokenExpiryWarning />}
+      {!isGuestPage && !isForgotPasswordPage && !isLoginPage && <Navbar />}
+      {!isGuestPage && !isForgotPasswordPage && !isLoginPage && <TokenExpiryWarning />}
       <Routes>
         <Route path="/" element={
           <ProtectedRoute>
