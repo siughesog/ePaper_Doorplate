@@ -57,6 +57,11 @@ public class LineBotService {
         
         verificationCodes.put(code, verificationCode);
         
+        System.out.println("🔑 生成 Line Bot 驗證碼");
+        System.out.println("   用戶: " + username);
+        System.out.println("   驗證碼: " + code);
+        System.out.println("   過期時間: " + verificationCode.getExpiresAt() + " (5 分鐘後)");
+        
         return code;
     }
 
@@ -64,31 +69,51 @@ public class LineBotService {
      * 驗證驗證碼並綁定 Line User ID
      */
     public boolean verifyAndBind(String code, String lineUserId) {
+        System.out.println("🔍 開始驗證驗證碼: " + code + " (Line User ID: " + lineUserId + ")");
+        
         LineVerificationCode verificationCode = verificationCodes.get(code);
         
         if (verificationCode == null) {
+            System.err.println("❌ 驗證碼不存在: " + code);
+            System.err.println("   可能原因：1) 驗證碼已使用 2) 驗證碼錯誤 3) 驗證碼已過期被清除");
             return false;
         }
         
         if (verificationCode.getExpiresAt().isBefore(LocalDateTime.now())) {
+            System.err.println("❌ 驗證碼已過期: " + code);
+            System.err.println("   過期時間: " + verificationCode.getExpiresAt());
+            System.err.println("   當前時間: " + LocalDateTime.now());
             verificationCodes.remove(code);
             return false;
         }
         
         String username = verificationCode.getUsername();
+        System.out.println("   驗證碼對應用戶: " + username);
+        System.out.println("   驗證碼過期時間: " + verificationCode.getExpiresAt());
+        
         Optional<User> userOpt = userRepository.findByUsername(username);
         
         if (userOpt.isEmpty()) {
+            System.err.println("❌ 用戶不存在: " + username);
             return false;
         }
         
         User user = userOpt.get();
+        System.out.println("   找到用戶: " + username);
+        System.out.println("   綁定前狀態 - lineBound: " + user.isLineBound() + ", lineUserId: " + user.getLineUserId());
+        
         user.setLineUserId(lineUserId);
         user.setLineBound(true);
         userRepository.save(user);
         
+        System.out.println("✅ 驗證碼驗證成功，已綁定 Line Bot");
+        System.out.println("   用戶: " + username);
+        System.out.println("   Line User ID: " + lineUserId);
+        System.out.println("   綁定後狀態 - lineBound: " + user.isLineBound() + ", lineUserId: " + user.getLineUserId());
+        
         // 清除驗證碼
         verificationCodes.remove(code);
+        System.out.println("   已清除使用過的驗證碼: " + code);
         
         return true;
     }
