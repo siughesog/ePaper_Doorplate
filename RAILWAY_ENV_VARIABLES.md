@@ -181,6 +181,14 @@ LINE_BOT_WEBHOOK_URL=https://your-project.up.railway.app/api/line/webhook
 # ============================================
 GUEST_MESSAGE_MAX_PER_IP_PER_HOUR=3
 GUEST_MESSAGE_MAX_PER_DEVICE_PER_HOUR=5
+
+# ============================================
+# 公開 API URL（必須，用於 Guest QR Code）
+# ============================================
+# Guest QR Code 需要公開的 API URL，訪客才能從外部訪問
+# 格式：https://your-backend.railway.app
+# 注意：不要包含尾部斜線，不要使用 localhost 或 127.0.0.1
+PUBLIC_API_URL=https://epaperdoorplate-production.up.railway.app
 ```
 
 ---

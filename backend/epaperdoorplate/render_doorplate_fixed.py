@@ -503,12 +503,18 @@ class DoorplateRenderer:
             self.draw.text((x + 5, y + 5), "NO TOKEN", fill='red')
             return
         
-        # 從環境變數獲取 API 基礎 URL
+        # 從環境變數獲取 API 基礎 URL（應該是公開 URL，訪客可以訪問）
         api_base_url = os.environ.get('API_BASE_URL', 'http://127.0.0.1:8080')
         
-        # 構建 QR code URL
-        qr_url = f"{api_base_url}/guest/message?token={token}"
+        # 構建 QR code URL（指向 Guest 留言頁面）
+        # 注意：URL 應該是公開的，不能是 localhost 或 127.0.0.1
+        qr_url = f"{api_base_url}/api/guest/message-page?token={token}"
         print(f"生成 Guest QR Code URL: {qr_url}")
+        
+        # 檢查 URL 是否為本地地址（警告）
+        if 'localhost' in api_base_url or '127.0.0.1' in api_base_url:
+            print("⚠️ 警告: API_BASE_URL 是本地地址，Guest QR Code 可能無法從外部訪問")
+            print("   請設置 PUBLIC_API_URL 環境變數為公開域名，例如: https://your-backend.railway.app")
         
         try:
             # 創建 QR code
