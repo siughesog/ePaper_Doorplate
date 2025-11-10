@@ -1271,12 +1271,7 @@ export default function DynamicConfigPage() {
                 />
               </div>
             </div>
-            
-            <div className="mt-4 text-center">
-              <p className="text-sm text-slate-500">
-                這是使用Python渲染器生成的800×480像素門牌圖片（會根據螢幕大小自動縮放）
-              </p>
-            </div>
+
           </div>
         )}
       </div>
