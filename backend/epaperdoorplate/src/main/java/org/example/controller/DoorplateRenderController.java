@@ -1,5 +1,9 @@
 package org.example.controller;
 
+import org.example.model.Device;
+import org.example.model.User;
+import org.example.repository.DeviceRepository;
+import org.example.repository.UserRepository;
 import org.example.service.DoorplateRendererService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
@@ -12,6 +16,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/render")
@@ -19,6 +25,12 @@ public class DoorplateRenderController {
     
     @Autowired
     private DoorplateRendererService rendererService;
+    
+    @Autowired
+    private UserRepository userRepository;
+    
+    @Autowired
+    private DeviceRepository deviceRepository;
     
     @PostMapping("/doorplate")
     public ResponseEntity<Resource> renderDoorplate(
@@ -55,6 +67,51 @@ public class DoorplateRenderController {
             for (int i = 0; i < elements.size(); i++) {
                 Map<String, Object> element = elements.get(i);
                 System.out.println("元素 " + (i + 1) + ": " + element.get("type") + " - " + element.get("name"));
+            }
+            
+            // 為 guestQRCode 元素添加 token
+            String guestQRCodeToken = null;
+            Optional<User> userOpt = userRepository.findByUsername(userId);
+            if (userOpt.isPresent()) {
+                User user = userOpt.get();
+                // 查找該用戶的第一個設備（用於獲取 token）
+                List<Device> userDevices = deviceRepository.findByUserIdAndUnboundFalse(user.getId());
+                if (!userDevices.isEmpty()) {
+                    Device device = userDevices.get(0);
+                    guestQRCodeToken = device.getGuestQRCodeToken();
+                    if (guestQRCodeToken == null || guestQRCodeToken.isEmpty()) {
+                        // 如果設備沒有 token，生成一個
+                        guestQRCodeToken = UUID.randomUUID().toString();
+                        device.setGuestQRCodeToken(guestQRCodeToken);
+                        deviceRepository.save(device);
+                        System.out.println("✅ 為設備生成新的 Guest QR Code Token: " + guestQRCodeToken);
+                    } else {
+                        System.out.println("✅ 使用設備的 Guest QR Code Token: " + guestQRCodeToken);
+                    }
+                } else {
+                    // 如果用戶沒有設備，生成一個臨時 token（僅用於預覽）
+                    guestQRCodeToken = UUID.randomUUID().toString();
+                    System.out.println("⚠️ 用戶沒有設備，生成臨時 Token 用於預覽: " + guestQRCodeToken);
+                }
+            }
+            
+            // 為所有 guestQRCode 元素添加 token
+            if (guestQRCodeToken != null) {
+                int guestQRCodeCount = 0;
+                for (Map<String, Object> element : elements) {
+                    if ("guestQRCode".equals(element.get("type"))) {
+                        guestQRCodeCount++;
+                        element.put("guestQRCodeToken", guestQRCodeToken);
+                        System.out.println("✅ 已為 Guest QR Code 元素添加 token");
+                        System.out.println("   元素 ID: " + element.get("id"));
+                        System.out.println("   Token: " + guestQRCodeToken);
+                    }
+                }
+                if (guestQRCodeCount > 0) {
+                    System.out.println("📊 找到 " + guestQRCodeCount + " 個 Guest QR Code 元素，已添加 token");
+                }
+            } else {
+                System.out.println("⚠️ 無法獲取 Guest QR Code Token，Guest QR Code 將無法正常渲染");
             }
             
             // 渲染門牌（直接返回數據，不保存文件）
