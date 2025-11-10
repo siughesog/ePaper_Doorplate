@@ -30,13 +30,17 @@ public class LineBotController {
      */
     @PostMapping("/webhook")
     public ResponseEntity<?> webhook(
-            @RequestBody String body,
             @RequestHeader(value = "X-Line-Signature", required = false) String signature,
             HttpServletRequest request) {
         
+        String body = null;
         try {
             System.out.println("📥 收到 Line Bot Webhook 請求");
             System.out.println("   Signature: " + (signature != null ? signature.substring(0, Math.min(20, signature.length())) + "..." : "null"));
+            
+            // 從 HttpServletRequest 直接讀取原始請求體（避免 Spring 修改內容）
+            body = readRequestBody(request);
+            System.out.println("   Body length: " + (body != null ? body.length() : 0) + " characters");
             
             // 驗證簽名
             if (signature == null) {
@@ -47,6 +51,8 @@ public class LineBotController {
             
             if (!lineBotService.verifySignature(body, signature)) {
                 System.err.println("❌ Line Bot Webhook 簽名驗證失敗");
+                System.err.println("   請檢查：1) LINE_BOT_CHANNEL_SECRET 環境變數是否正確設置");
+                System.err.println("           2) Channel Secret 值是否與 Line Developers Console 一致");
                 // Line 要求返回 200，即使驗證失敗也要返回 200 避免重試
                 return ResponseEntity.ok().build();
             }
@@ -217,6 +223,33 @@ public class LineBotController {
             response.put("success", false);
             response.put("message", "解除綁定失敗: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+
+    /**
+     * 從 HttpServletRequest 讀取原始請求體
+     * 必須使用原始請求體進行簽名驗證，避免 Spring 修改內容
+     * 注意：保留原始格式，包括換行符
+     */
+    private String readRequestBody(HttpServletRequest request) {
+        try {
+            StringBuilder body = new StringBuilder();
+            try (java.io.BufferedReader reader = request.getReader()) {
+                String line;
+                boolean firstLine = true;
+                while ((line = reader.readLine()) != null) {
+                    if (!firstLine) {
+                        body.append("\n");  // 保留換行符
+                    }
+                    body.append(line);
+                    firstLine = false;
+                }
+            }
+            return body.toString();
+        } catch (Exception e) {
+            System.err.println("❌ 讀取請求體失敗: " + e.getMessage());
+            e.printStackTrace();
+            return null;
         }
     }
 
