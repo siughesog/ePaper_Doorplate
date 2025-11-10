@@ -552,6 +552,43 @@ class ApiService {
     return response.json();
   }
 
+  // 忘記密碼相關API（公開，不需要認證）
+  async sendPasswordResetCode(email) {
+    const response = await fetch(`${this.baseURL}/api/auth/forgot-password`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email }),
+      credentials: 'include'
+    });
+    return response.json();
+  }
+
+  async verifyPasswordResetCode(email, code) {
+    const response = await fetch(`${this.baseURL}/api/auth/verify-reset-code`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email, code }),
+      credentials: 'include'
+    });
+    return response.json();
+  }
+
+  async resetPassword(email, code, newPassword) {
+    const response = await fetch(`${this.baseURL}/api/auth/reset-password`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email, code, newPassword }),
+      credentials: 'include'
+    });
+    return response.json();
+  }
+
   // Line Bot 相關API
   async getLineBotInfo() {
     const response = await this.request(`${this.baseURL}/api/line/info`, {

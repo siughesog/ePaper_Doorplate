@@ -3,7 +3,9 @@ package org.example.service;
 import org.example.dto.AuthResponse;
 import org.example.dto.LoginRequest;
 import org.example.dto.RegisterRequest;
+import org.example.model.PasswordResetCode;
 import org.example.model.User;
+import org.example.repository.PasswordResetCodeRepository;
 import org.example.repository.UserRepository;
 import org.example.utils.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,7 +14,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Random;
 
 @Service
 @Transactional
@@ -26,6 +31,12 @@ public class AuthService {
 
     @Autowired
     private JwtUtil jwtUtil;
+
+    @Autowired
+    private PasswordResetCodeRepository passwordResetCodeRepository;
+
+    @Autowired
+    private EmailService emailService;
 
     public AuthResponse register(RegisterRequest request) {
         // 驗證密碼確認
@@ -98,5 +109,124 @@ public class AuthService {
         } catch (Exception e) {
             return false;
         }
+    }
+
+    /**
+     * 發送密碼重置驗證碼
+     */
+    public Map<String, Object> sendPasswordResetCode(String email) {
+        Map<String, Object> response = new HashMap<>();
+
+        // 查找用戶
+        Optional<User> userOpt = userRepository.findAll().stream()
+                .filter(u -> u.getEmail() != null && u.getEmail().equals(email))
+                .findFirst();
+
+        if (userOpt.isEmpty()) {
+            // 為了安全，即使用戶不存在也返回成功（防止用戶枚舉）
+            response.put("success", true);
+            response.put("message", "如果該電子郵件地址存在，我們已發送驗證碼");
+            return response;
+        }
+
+        // 生成6位數字驗證碼
+        Random random = new Random();
+        String code = String.format("%06d", random.nextInt(1000000));
+
+        // 保存驗證碼
+        PasswordResetCode resetCode = new PasswordResetCode();
+        resetCode.setEmail(email);
+        resetCode.setCode(code);
+        resetCode.setCreatedAt(LocalDateTime.now());
+        resetCode.setExpiresAt(LocalDateTime.now().plusMinutes(5)); // 5分鐘有效期
+        resetCode.setUsed(false);
+        passwordResetCodeRepository.save(resetCode);
+
+        // 發送 email
+        emailService.sendPasswordResetCode(email, code);
+
+        response.put("success", true);
+        response.put("message", "驗證碼已發送至您的電子郵件");
+        return response;
+    }
+
+    /**
+     * 驗證密碼重置驗證碼
+     */
+    public Map<String, Object> verifyPasswordResetCode(String email, String code) {
+        Map<String, Object> response = new HashMap<>();
+
+        Optional<PasswordResetCode> codeOpt = passwordResetCodeRepository
+                .findByEmailAndCodeAndUsedFalse(email, code);
+
+        if (codeOpt.isEmpty()) {
+            response.put("success", false);
+            response.put("message", "驗證碼錯誤或已使用");
+            return response;
+        }
+
+        PasswordResetCode resetCode = codeOpt.get();
+
+        // 檢查是否過期
+        if (resetCode.getExpiresAt().isBefore(LocalDateTime.now())) {
+            response.put("success", false);
+            response.put("message", "驗證碼已過期");
+            return response;
+        }
+
+        response.put("success", true);
+        response.put("message", "驗證碼正確");
+        return response;
+    }
+
+    /**
+     * 重置密碼
+     */
+    public Map<String, Object> resetPassword(String email, String code, String newPassword) {
+        Map<String, Object> response = new HashMap<>();
+
+        // 驗證驗證碼
+        Optional<PasswordResetCode> codeOpt = passwordResetCodeRepository
+                .findByEmailAndCodeAndUsedFalse(email, code);
+
+        if (codeOpt.isEmpty()) {
+            response.put("success", false);
+            response.put("message", "驗證碼錯誤或已使用");
+            return response;
+        }
+
+        PasswordResetCode resetCode = codeOpt.get();
+
+        // 檢查是否過期
+        if (resetCode.getExpiresAt().isBefore(LocalDateTime.now())) {
+            response.put("success", false);
+            response.put("message", "驗證碼已過期");
+            return response;
+        }
+
+        // 查找用戶
+        Optional<User> userOpt = userRepository.findAll().stream()
+                .filter(u -> u.getEmail() != null && u.getEmail().equals(email))
+                .findFirst();
+
+        if (userOpt.isEmpty()) {
+            response.put("success", false);
+            response.put("message", "用戶不存在");
+            return response;
+        }
+
+        User user = userOpt.get();
+
+        // 更新密碼
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+
+        // 標記驗證碼為已使用
+        resetCode.setUsed(true);
+        passwordResetCodeRepository.save(resetCode);
+
+        response.put("success", true);
+        response.put("message", "密碼重置成功");
+        return response;
     }
 }

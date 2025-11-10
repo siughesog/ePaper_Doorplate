@@ -14,16 +14,18 @@ import TokenExpiryWarning from './components/TokenExpiryWarning'
 import Page from './Page'
 import Settings from './Settings'
 import GuestMessage from './GuestMessage'
+import ForgotPassword from './ForgotPassword'
 import db from './db'
 
 function AppContent() {
   const location = useLocation();
   const isGuestPage = location.pathname.startsWith('/guest');
+  const isForgotPasswordPage = location.pathname === '/forgot-password';
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {!isGuestPage && <Navbar />}
-      {!isGuestPage && <TokenExpiryWarning />}
+      {!isGuestPage && !isForgotPasswordPage && <Navbar />}
+      {!isGuestPage && !isForgotPasswordPage && <TokenExpiryWarning />}
       <Routes>
         <Route path="/" element={
           <ProtectedRoute>
@@ -68,6 +70,7 @@ function AppContent() {
           </ProtectedRoute>
         } />
         <Route path="/guest/message" element={<GuestMessage />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
       </Routes>
     </div>
   );

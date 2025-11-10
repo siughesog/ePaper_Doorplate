@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Settings as SettingsIcon, QrCode, MessageSquare, Bell, Save, X, Check, User, Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import { Settings as SettingsIcon, QrCode, MessageSquare, Bell, Save, X, Check, User, Mail, Lock, Eye, EyeOff, ChevronDown, ChevronUp } from 'lucide-react';
 import apiService from './services/api';
 import { useToast } from './components/Toast';
 import { useAuth } from './contexts/AuthContext';
@@ -36,6 +36,7 @@ export default function Settings() {
   const [showVerificationCode, setShowVerificationCode] = useState(false);
   const [lineQRCodeUrl, setLineQRCodeUrl] = useState('');
   const [lineBotInfo, setLineBotInfo] = useState(null);
+  const [isAccountExpanded, setIsAccountExpanded] = useState(false);
 
   useEffect(() => {
     loadSettings();
@@ -255,10 +256,21 @@ export default function Settings() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* 帳戶資訊區塊 */}
         <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6 mb-6">
-          <div className="flex items-center space-x-3 mb-4">
-            <User className="w-5 h-5 text-blue-600" />
-            <h2 className="text-lg font-semibold text-slate-800">帳戶資訊</h2>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-3">
+              <User className="w-5 h-5 text-blue-600" />
+              <h2 className="text-lg font-semibold text-slate-800">帳戶資訊</h2>
+            </div>
+            <button
+              onClick={() => setIsAccountExpanded(!isAccountExpanded)}
+              className="flex items-center space-x-2 text-slate-600 hover:text-slate-800 transition-colors"
+            >
+              <span className="text-sm">{isAccountExpanded ? '收起' : '修改帳戶資訊'}</span>
+              {isAccountExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </button>
           </div>
+
+          {isAccountExpanded && (
 
           <div className="space-y-4">
             <div>
@@ -382,6 +394,7 @@ export default function Settings() {
               </button>
             </div>
           </div>
+          )}
         </div>
 
         {/* Line Bot 綁定區塊 */}
