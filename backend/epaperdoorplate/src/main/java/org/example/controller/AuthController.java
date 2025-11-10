@@ -5,7 +5,6 @@ import org.example.dto.LoginRequest;
 import org.example.dto.RegisterRequest;
 import org.example.service.AuthService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
