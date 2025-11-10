@@ -329,6 +329,15 @@ public class DoorplateRendererService {
                 json.append("      ,\"contrast\": ").append(element.getOrDefault("contrast", 1.0)).append("\n");
             } else if ("qrCode".equals(element.get("type"))) {
                 json.append("      ,\"content\": \"").append(escapeJsonString(element.getOrDefault("content", "").toString())).append("\"\n");
+            } else if ("guestQRCode".equals(element.get("type"))) {
+                // Guest QR Code 需要 token
+                Object token = element.get("guestQRCodeToken");
+                if (token != null) {
+                    json.append("      ,\"guestQRCodeToken\": \"").append(escapeJsonString(token.toString())).append("\"\n");
+                    System.out.println("✅ 在 JSON 中添加 Guest QR Code Token: " + token.toString());
+                } else {
+                    System.err.println("⚠️ Guest QR Code 元素缺少 guestQRCodeToken");
+                }
             } else if ("barcode".equals(element.get("type"))) {
                 json.append("      ,\"content\": \"").append(escapeJsonString(element.getOrDefault("content", "").toString())).append("\"\n");
             }
