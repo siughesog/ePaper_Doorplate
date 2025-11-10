@@ -59,25 +59,50 @@ public class LineBotController {
             
             System.out.println("✅ Line Bot Webhook 簽名驗證成功");
 
-            JsonNode root = objectMapper.readTree(body);
+            // 解析 JSON 請求體
+            JsonNode root;
+            try {
+                root = objectMapper.readTree(body);
+                System.out.println("📋 解析 JSON 成功");
+            } catch (Exception e) {
+                System.err.println("❌ 解析 JSON 失敗: " + e.getMessage());
+                System.err.println("   Body 內容: " + (body != null ? body.substring(0, Math.min(200, body.length())) : "null"));
+                e.printStackTrace();
+                return ResponseEntity.ok().build();
+            }
+
             JsonNode events = root.get("events");
+            System.out.println("📦 事件數量: " + (events != null && events.isArray() ? events.size() : 0));
 
             if (events != null && events.isArray()) {
                 for (JsonNode event : events) {
-                    String type = event.get("type").asText();
+                    String type = event.has("type") ? event.get("type").asText() : "unknown";
+                    System.out.println("📨 處理事件類型: " + type);
                     
                     if ("message".equals(type)) {
                         JsonNode message = event.get("message");
-                        String messageType = message.get("type").asText();
+                        if (message == null) {
+                            System.err.println("⚠️ 事件中沒有 message 欄位");
+                            continue;
+                        }
+                        
+                        String messageType = message.has("type") ? message.get("type").asText() : "unknown";
+                        System.out.println("💬 訊息類型: " + messageType);
                         String replyToken = event.has("replyToken") ? event.get("replyToken").asText() : null;
+                        System.out.println("🔑 Reply Token: " + (replyToken != null ? replyToken.substring(0, Math.min(20, replyToken.length())) + "..." : "null"));
                         
                         if ("text".equals(messageType)) {
-                            String text = message.get("text").asText();
+                            String text = message.has("text") ? message.get("text").asText() : "";
                             JsonNode source = event.get("source");
-                            String lineUserId = source != null && source.has("userId") ? source.get("userId").asText() : null;
+                            String lineUserId = null;
+                            
+                            if (source != null && source.has("userId")) {
+                                lineUserId = source.get("userId").asText();
+                            }
                             
                             if (lineUserId == null) {
                                 System.err.println("⚠️ 無法獲取 Line User ID");
+                                System.err.println("   Source: " + (source != null ? source.toString() : "null"));
                                 continue;
                             }
                             
@@ -92,9 +117,14 @@ public class LineBotController {
                                     System.out.println("✅ 驗證碼驗證成功，綁定 Line User ID: " + lineUserId);
                                     // 使用 Reply API 回覆訊息
                                     if (replyToken != null) {
-                                        lineBotService.replyMessage(replyToken, "✅ Line Bot 綁定成功！\n\n您現在可以接收訪客留言通知了。");
+                                        boolean replySuccess = lineBotService.replyMessage(replyToken, "✅ Line Bot 綁定成功！\n\n您現在可以接收訪客留言通知了。");
+                                        if (!replySuccess) {
+                                            System.err.println("⚠️ 回覆訊息失敗，嘗試使用 Push API");
+                                            lineBotService.sendMessage(lineUserId, "✅ Line Bot 綁定成功！\n\n您現在可以接收訪客留言通知了。");
+                                        }
                                     } else {
                                         // 如果沒有 replyToken，使用 Push API
+                                        System.out.println("⚠️ 沒有 replyToken，使用 Push API");
                                         lineBotService.sendMessage(lineUserId, "✅ Line Bot 綁定成功！\n\n您現在可以接收訪客留言通知了。");
                                     }
                                 } else {
@@ -108,13 +138,23 @@ public class LineBotController {
                                     }
                                 }
                             } else {
+                                System.out.println("ℹ️ 收到非驗證碼訊息: " + text);
                                 // 如果不是驗證碼，回覆提示訊息
                                 if (replyToken != null) {
                                     lineBotService.replyMessage(replyToken, "請輸入 6 位數字驗證碼來綁定 Line Bot。\n\n驗證碼可以在設定頁面獲取。");
                                 }
                             }
+                        } else {
+                            System.out.println("ℹ️ 忽略非文字訊息類型: " + messageType);
                         }
+                    } else {
+                        System.out.println("ℹ️ 忽略非訊息事件類型: " + type);
                     }
+                }
+            } else {
+                System.out.println("⚠️ 沒有事件或 events 不是陣列");
+                if (body != null) {
+                    System.out.println("   Body 內容: " + body.substring(0, Math.min(500, body.length())));
                 }
             }
 
