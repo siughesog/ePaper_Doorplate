@@ -489,8 +489,16 @@ class DoorplateRenderer:
         
         # 從元素中獲取 token
         token = element.get('guestQRCodeToken', '')
+        print(f"🔍 Guest QR Code 元素資訊:")
+        print(f"   元素 ID: {element.get('id', 'unknown')}")
+        print(f"   位置: x={x}, y={y}")
+        print(f"   大小: {width}x{height}")
+        print(f"   Token: {token if token else 'MISSING'}")
+        print(f"   元素所有鍵: {list(element.keys())}")
+        
         if not token:
             print("❌ Guest QR Code 元素缺少 token")
+            print(f"   元素完整內容: {element}")
             self.draw.rectangle([x, y, x + width, y + height], outline='red', width=2)
             self.draw.text((x + 5, y + 5), "NO TOKEN", fill='red')
             return

@@ -346,13 +346,34 @@ public class DeviceService {
                 
                 // 為 guestQRCode 元素添加 token
                 String guestQRCodeToken = device.getGuestQRCodeToken();
-                if (guestQRCodeToken != null && !guestQRCodeToken.isEmpty()) {
-                    for (Map<String, Object> element : elements) {
-                        if ("guestQRCode".equals(element.get("type"))) {
-                            element.put("guestQRCodeToken", guestQRCodeToken);
-                            System.out.println("已為 Guest QR Code 元素添加 token");
-                        }
+                System.out.println("🔍 檢查 Guest QR Code Token");
+                System.out.println("   Device ID: " + deviceId);
+                System.out.println("   Token: " + (guestQRCodeToken != null ? guestQRCodeToken : "null"));
+                
+                if (guestQRCodeToken == null || guestQRCodeToken.isEmpty()) {
+                    System.err.println("⚠️ Guest QR Code Token 為空，生成新的 token");
+                    guestQRCodeToken = UUID.randomUUID().toString();
+                    device.setGuestQRCodeToken(guestQRCodeToken);
+                    deviceRepository.save(device);
+                    System.out.println("✅ 已生成新的 Guest QR Code Token: " + guestQRCodeToken);
+                }
+                
+                int guestQRCodeCount = 0;
+                for (Map<String, Object> element : elements) {
+                    String elementType = (String) element.get("type");
+                    if ("guestQRCode".equals(elementType)) {
+                        guestQRCodeCount++;
+                        element.put("guestQRCodeToken", guestQRCodeToken);
+                        System.out.println("✅ 已為 Guest QR Code 元素添加 token");
+                        System.out.println("   元素 ID: " + element.get("id"));
+                        System.out.println("   元素位置: x=" + element.get("x") + ", y=" + element.get("y"));
                     }
+                }
+                
+                if (guestQRCodeCount == 0) {
+                    System.out.println("ℹ️ 模板中沒有 Guest QR Code 元素");
+                } else {
+                    System.out.println("📊 找到 " + guestQRCodeCount + " 個 Guest QR Code 元素");
                 }
                 
                 // 渲染門牌（直接返回數據，不保存文件）
