@@ -6,6 +6,7 @@ import org.example.utils.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -21,6 +22,9 @@ public class SettingsController {
 
     @Autowired
     private JwtUtil jwtUtil;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     /**
      * 獲取用戶設定
@@ -51,6 +55,8 @@ public class SettingsController {
             
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
+            response.put("username", user.getUsername());
+            response.put("email", user.getEmail());
             response.put("lineBound", user.isLineBound());
             response.put("lineUserId", user.getLineUserId());
             response.put("acceptGuestMessages", user.isAcceptGuestMessages());
@@ -94,6 +100,7 @@ public class SettingsController {
             }
 
             User user = userOpt.get();
+            boolean usernameChanged = false;
             
             // 更新設定（只更新提供的欄位）
             if (settings.containsKey("acceptGuestMessages")) {
@@ -114,12 +121,140 @@ public class SettingsController {
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("message", "設定已更新");
+            response.put("usernameChanged", usernameChanged);
             
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             Map<String, Object> response = new HashMap<>();
             response.put("success", false);
             response.put("message", "更新設定失敗: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        }
+    }
+
+    /**
+     * 更新帳戶資訊（用戶名、電子郵件、密碼）
+     */
+    @PutMapping("/account")
+    public ResponseEntity<Map<String, Object>> updateAccount(
+            @RequestHeader(value = "Authorization") String authHeader,
+            @RequestBody Map<String, Object> accountData) {
+        
+        try {
+            String username = extractUsernameFromToken(authHeader);
+            
+            if (username == null) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", false);
+                response.put("message", "無法識別用戶");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+            }
+
+            Optional<User> userOpt = userRepository.findByUsername(username);
+            if (userOpt.isEmpty()) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", false);
+                response.put("message", "用戶不存在");
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+            }
+
+            User user = userOpt.get();
+            boolean usernameChanged = false;
+            boolean passwordChanged = false;
+            
+            // 更新用戶名
+            if (accountData.containsKey("username")) {
+                String newUsername = (String) accountData.get("username");
+                if (newUsername != null && !newUsername.trim().isEmpty() && !newUsername.equals(user.getUsername())) {
+                    // 檢查新用戶名是否已存在
+                    Optional<User> existingUser = userRepository.findByUsername(newUsername);
+                    if (existingUser.isPresent() && !existingUser.get().getId().equals(user.getId())) {
+                        Map<String, Object> response = new HashMap<>();
+                        response.put("success", false);
+                        response.put("message", "用戶名已被使用");
+                        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+                    }
+                    
+                    // 驗證用戶名長度
+                    if (newUsername.length() < 3 || newUsername.length() > 20) {
+                        Map<String, Object> response = new HashMap<>();
+                        response.put("success", false);
+                        response.put("message", "用戶名長度必須在3-20個字符之間");
+                        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+                    }
+                    
+                    user.setUsername(newUsername);
+                    usernameChanged = true;
+                }
+            }
+            
+            // 更新電子郵件
+            if (accountData.containsKey("email")) {
+                String newEmail = (String) accountData.get("email");
+                if (newEmail != null && !newEmail.trim().isEmpty() && !newEmail.equals(user.getEmail())) {
+                    // 檢查新電子郵件是否已存在
+                    Optional<User> existingUserByEmail = userRepository.findAll().stream()
+                            .filter(u -> u.getEmail() != null && u.getEmail().equals(newEmail) && !u.getId().equals(user.getId()))
+                            .findFirst();
+                    if (existingUserByEmail.isPresent()) {
+                        Map<String, Object> response = new HashMap<>();
+                        response.put("success", false);
+                        response.put("message", "電子郵件已被使用");
+                        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+                    }
+                    
+                    // 簡單的電子郵件格式驗證
+                    if (!newEmail.contains("@") || !newEmail.contains(".")) {
+                        Map<String, Object> response = new HashMap<>();
+                        response.put("success", false);
+                        response.put("message", "請輸入有效的電子郵件地址");
+                        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+                    }
+                    
+                    user.setEmail(newEmail);
+                }
+            }
+            
+            // 更新密碼
+            if (accountData.containsKey("currentPassword") && accountData.containsKey("newPassword")) {
+                String currentPassword = (String) accountData.get("currentPassword");
+                String newPassword = (String) accountData.get("newPassword");
+                
+                if (currentPassword != null && newPassword != null && !newPassword.trim().isEmpty()) {
+                    // 驗證當前密碼
+                    if (!passwordEncoder.matches(currentPassword, user.getPasswordHash())) {
+                        Map<String, Object> response = new HashMap<>();
+                        response.put("success", false);
+                        response.put("message", "當前密碼錯誤");
+                        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+                    }
+                    
+                    // 驗證新密碼長度
+                    if (newPassword.length() < 6) {
+                        Map<String, Object> response = new HashMap<>();
+                        response.put("success", false);
+                        response.put("message", "新密碼長度至少6個字符");
+                        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+                    }
+                    
+                    user.setPasswordHash(passwordEncoder.encode(newPassword));
+                    passwordChanged = true;
+                }
+            }
+            
+            userRepository.save(user);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "帳戶資訊已更新");
+            response.put("usernameChanged", usernameChanged);
+            response.put("passwordChanged", passwordChanged);
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "更新帳戶資訊失敗: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }

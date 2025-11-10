@@ -1,19 +1,36 @@
 import { useState, useEffect } from 'react';
-import { Settings as SettingsIcon, QrCode, MessageSquare, Bell, Save, X, Check } from 'lucide-react';
+import { Settings as SettingsIcon, QrCode, MessageSquare, Bell, Save, X, Check, User, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import apiService from './services/api';
 import { useToast } from './components/Toast';
+import { useAuth } from './contexts/AuthContext';
 
 export default function Settings() {
   const toast = useToast();
+  const { logout } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [savingAccount, setSavingAccount] = useState(false);
   const [settings, setSettings] = useState({
+    username: '',
+    email: '',
     lineBound: false,
     lineUserId: null,
     acceptGuestMessages: true,
     guestMessageWelcomeText: '歡迎留言給我們',
     guestMessageHintText: '請輸入您的留言',
     guestMessageSubmitText: '發送留言'
+  });
+  const [accountData, setAccountData] = useState({
+    username: '',
+    email: '',
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [showPassword, setShowPassword] = useState({
+    current: false,
+    new: false,
+    confirm: false
   });
   const [verificationCode, setVerificationCode] = useState('');
   const [showVerificationCode, setShowVerificationCode] = useState(false);
@@ -47,12 +64,21 @@ export default function Settings() {
       const result = await apiService.getSettings();
       if (result.success) {
         setSettings({
+          username: result.username || '',
+          email: result.email || '',
           lineBound: result.lineBound || false,
           lineUserId: result.lineUserId || null,
           acceptGuestMessages: result.acceptGuestMessages !== undefined ? result.acceptGuestMessages : true,
           guestMessageWelcomeText: result.guestMessageWelcomeText || '歡迎留言給我們',
           guestMessageHintText: result.guestMessageHintText || '請輸入您的留言',
           guestMessageSubmitText: result.guestMessageSubmitText || '發送留言'
+        });
+        setAccountData({
+          username: result.username || '',
+          email: result.email || '',
+          currentPassword: '',
+          newPassword: '',
+          confirmPassword: ''
         });
       } else {
         toast.error(result.message || '載入設定失敗');
@@ -130,6 +156,72 @@ export default function Settings() {
     }
   };
 
+  const handleSaveAccount = async () => {
+    // 驗證密碼確認
+    if (accountData.newPassword && accountData.newPassword !== accountData.confirmPassword) {
+      toast.error('新密碼與確認密碼不匹配');
+      return;
+    }
+
+    // 如果修改密碼，必須提供當前密碼
+    if (accountData.newPassword && !accountData.currentPassword) {
+      toast.error('修改密碼需要提供當前密碼');
+      return;
+    }
+
+    try {
+      setSavingAccount(true);
+      const updateData = {};
+      
+      if (accountData.username !== settings.username) {
+        updateData.username = accountData.username;
+      }
+      if (accountData.email !== settings.email) {
+        updateData.email = accountData.email;
+      }
+      if (accountData.newPassword) {
+        updateData.currentPassword = accountData.currentPassword;
+        updateData.newPassword = accountData.newPassword;
+      }
+
+      if (Object.keys(updateData).length === 0) {
+        toast.info('沒有需要更新的資訊');
+        return;
+      }
+
+      const result = await apiService.updateAccount(updateData);
+
+      if (result.success) {
+        toast.success(result.message || '帳戶資訊已更新');
+        
+        // 如果用戶名改變，需要重新登入
+        if (result.usernameChanged) {
+          toast.info('用戶名已更改，請重新登入');
+          setTimeout(() => {
+            logout();
+          }, 2000);
+        } else {
+          // 重新載入設定
+          await loadSettings();
+          // 清空密碼欄位
+          setAccountData(prev => ({
+            ...prev,
+            currentPassword: '',
+            newPassword: '',
+            confirmPassword: ''
+          }));
+        }
+      } else {
+        toast.error(result.message || '更新帳戶資訊失敗');
+      }
+    } catch (error) {
+      console.error('更新帳戶資訊失敗:', error);
+      toast.error('更新帳戶資訊失敗');
+    } finally {
+      setSavingAccount(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
@@ -161,6 +253,137 @@ export default function Settings() {
       </div>
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* 帳戶資訊區塊 */}
+        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6 mb-6">
+          <div className="flex items-center space-x-3 mb-4">
+            <User className="w-5 h-5 text-blue-600" />
+            <h2 className="text-lg font-semibold text-slate-800">帳戶資訊</h2>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                用戶名
+              </label>
+              <input
+                type="text"
+                value={accountData.username}
+                onChange={(e) => setAccountData(prev => ({ ...prev, username: e.target.value }))}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="用戶名"
+                minLength={3}
+                maxLength={20}
+              />
+              <p className="text-xs text-slate-500 mt-1">用戶名長度必須在3-20個字符之間</p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                電子郵件
+              </label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input
+                  type="email"
+                  value={accountData.email}
+                  onChange={(e) => setAccountData(prev => ({ ...prev, email: e.target.value }))}
+                  className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="example@email.com"
+                />
+              </div>
+            </div>
+
+            <div className="border-t border-slate-200 pt-4">
+              <h3 className="text-sm font-semibold text-slate-700 mb-4">修改密碼（可選）</h3>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    當前密碼
+                  </label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input
+                      type={showPassword.current ? "text" : "password"}
+                      value={accountData.currentPassword}
+                      onChange={(e) => setAccountData(prev => ({ ...prev, currentPassword: e.target.value }))}
+                      className="w-full pl-10 pr-10 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="輸入當前密碼"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(prev => ({ ...prev, current: !prev.current }))}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    >
+                      {showPassword.current ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    新密碼
+                  </label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input
+                      type={showPassword.new ? "text" : "password"}
+                      value={accountData.newPassword}
+                      onChange={(e) => setAccountData(prev => ({ ...prev, newPassword: e.target.value }))}
+                      className="w-full pl-10 pr-10 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="輸入新密碼"
+                      minLength={6}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(prev => ({ ...prev, new: !prev.new }))}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    >
+                      {showPassword.new ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">密碼長度至少6個字符</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    確認新密碼
+                  </label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <input
+                      type={showPassword.confirm ? "text" : "password"}
+                      value={accountData.confirmPassword}
+                      onChange={(e) => setAccountData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                      className="w-full pl-10 pr-10 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="再次輸入新密碼"
+                      minLength={6}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(prev => ({ ...prev, confirm: !prev.confirm }))}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    >
+                      {showPassword.confirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-4">
+              <button
+                onClick={handleSaveAccount}
+                disabled={savingAccount}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+              >
+                <Save className="w-4 h-4" />
+                <span>{savingAccount ? '保存中...' : '保存帳戶資訊'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
         {/* Line Bot 綁定區塊 */}
         <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6 mb-6">
           <div className="flex items-center space-x-3 mb-4">

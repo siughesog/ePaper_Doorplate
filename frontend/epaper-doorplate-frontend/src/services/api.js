@@ -543,6 +543,15 @@ class ApiService {
     return response.json();
   }
 
+  // 更新帳戶資訊（用戶名、電子郵件、密碼）
+  async updateAccount(accountData) {
+    const response = await this.request(`${this.baseURL}/api/settings/account`, {
+      method: 'PUT',
+      body: JSON.stringify(accountData)
+    });
+    return response.json();
+  }
+
   // Line Bot 相關API
   async getLineBotInfo() {
     const response = await this.request(`${this.baseURL}/api/line/info`, {
