@@ -163,41 +163,44 @@ public class DoorplateRendererService {
                 "--height", "480"
             );
             
-            // 設置環境變數，讓 Python 腳本知道後端 URL
-            // 對於 Guest QR Code，必須使用公開的 API URL（訪客需要從外部訪問）
-            // 優先使用環境變數 PUBLIC_API_URL，如果沒有則構建公開 URL
-            String publicApiUrl = System.getenv("PUBLIC_API_URL");
+            // 設置環境變數，讓 Python 腳本知道前端 URL（Guest QR Code 指向前端頁面）
+            // 優先使用環境變數 FRONTEND_URL
+            String frontendUrl = System.getenv("FRONTEND_URL");
             
+            if (frontendUrl == null || frontendUrl.isEmpty()) {
+                System.err.println("⚠️ 警告: FRONTEND_URL 環境變數未設置");
+                System.err.println("   Guest QR Code 需要指向前端頁面，請設置 FRONTEND_URL");
+                System.err.println("   例如: https://epaper-doorplate.vercel.app");
+                // 開發環境回退值
+                frontendUrl = "http://localhost:3000";
+            }
+            
+            // 設置環境變數（Guest QR Code 使用前端 URL）
+            processBuilder.environment().put("FRONTEND_URL", frontendUrl);
+            System.out.println("設置 FRONTEND_URL 環境變數: " + frontendUrl);
+            
+            // 同時設置 API_BASE_URL（用於圖片等資源，向後兼容）
+            String publicApiUrl = System.getenv("PUBLIC_API_URL");
             if (publicApiUrl == null || publicApiUrl.isEmpty()) {
                 // 如果沒有設置 PUBLIC_API_URL，嘗試從 Railway 環境變數獲取
                 String railwayUrl = System.getenv("RAILWAY_PUBLIC_DOMAIN");
                 if (railwayUrl != null && !railwayUrl.isEmpty()) {
-                    // Railway 提供的公開域名（自動包含 https://）
                     if (!railwayUrl.startsWith("http://") && !railwayUrl.startsWith("https://")) {
                         publicApiUrl = "https://" + railwayUrl;
                     } else {
                         publicApiUrl = railwayUrl;
                     }
                 } else {
-                    // 回退到構建 URL（生產環境應該設置 PUBLIC_API_URL）
                     String protocol = "true".equalsIgnoreCase(sslEnabled) ? "https" : "http";
-                    // 注意：這裡應該使用公開域名，而不是內部地址
-                    // 如果 server.address 是 0.0.0.0，這表示監聽所有接口，但公開 URL 需要是實際域名
                     if ("0.0.0.0".equals(serverAddress)) {
-                        // 生產環境應該設置 PUBLIC_API_URL 環境變數
-                        // 這裡使用 localhost 作為回退（僅用於開發環境）
                         publicApiUrl = protocol + "://localhost:" + serverPort;
-                        System.err.println("⚠️ 警告: 未設置 PUBLIC_API_URL 環境變數，使用 localhost（僅適用於開發環境）");
-                        System.err.println("   生產環境請設置 PUBLIC_API_URL，例如: https://your-backend.railway.app");
                     } else {
                         publicApiUrl = protocol + "://" + serverAddress + ":" + serverPort;
                     }
                 }
             }
-            
-            // 設置環境變數（Guest QR Code 使用公開 URL）
             processBuilder.environment().put("API_BASE_URL", publicApiUrl);
-            System.out.println("設置 API_BASE_URL 環境變數（公開 URL）: " + publicApiUrl);
+            System.out.println("設置 API_BASE_URL 環境變數（用於圖片資源）: " + publicApiUrl);
             
             // 設置 uploads 目錄路徑（絕對路徑）
             String backendPath = getBackendPath();

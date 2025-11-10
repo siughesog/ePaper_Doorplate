@@ -183,11 +183,19 @@ GUEST_MESSAGE_MAX_PER_IP_PER_HOUR=3
 GUEST_MESSAGE_MAX_PER_DEVICE_PER_HOUR=5
 
 # ============================================
-# 公開 API URL（必須，用於 Guest QR Code）
+# 前端 URL（必須，用於 Guest QR Code）
 # ============================================
-# Guest QR Code 需要公開的 API URL，訪客才能從外部訪問
-# 格式：https://your-backend.railway.app
+# Guest QR Code 需要指向前端頁面，訪客才能看到留言頁面
+# 格式：https://your-frontend.vercel.app
 # 注意：不要包含尾部斜線，不要使用 localhost 或 127.0.0.1
+FRONTEND_URL=https://epaper-doorplate.vercel.app
+
+# ============================================
+# 公開 API URL（可選，用於圖片等資源）
+# ============================================
+# 用於圖片等資源的公開 URL（如果與前端不同域名）
+# 格式：https://your-backend.railway.app
+# 注意：不要包含尾部斜線
 PUBLIC_API_URL=https://epaperdoorplate-production.up.railway.app
 ```
 

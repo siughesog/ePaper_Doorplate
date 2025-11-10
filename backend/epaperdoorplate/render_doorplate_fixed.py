@@ -503,18 +503,33 @@ class DoorplateRenderer:
             self.draw.text((x + 5, y + 5), "NO TOKEN", fill='red')
             return
         
-        # 從環境變數獲取 API 基礎 URL（應該是公開 URL，訪客可以訪問）
-        api_base_url = os.environ.get('API_BASE_URL', 'http://127.0.0.1:8080')
+        # 從環境變數獲取前端 URL（Guest QR Code 應該指向前端頁面，不是後端 API）
+        # 優先使用 FRONTEND_URL，如果沒有則使用 API_BASE_URL（向後兼容）
+        frontend_url = os.environ.get('FRONTEND_URL')
+        if not frontend_url:
+            # 如果沒有設置 FRONTEND_URL，嘗試從 API_BASE_URL 推斷（不推薦）
+            api_base_url = os.environ.get('API_BASE_URL', 'http://127.0.0.1:8080')
+            # 如果 API_BASE_URL 是後端域名，嘗試推斷前端域名（僅用於開發環境）
+            if 'railway.app' in api_base_url:
+                # 無法自動推斷，需要設置 FRONTEND_URL
+                frontend_url = None
+            else:
+                # 開發環境：假設前端和後端在同一域名
+                frontend_url = api_base_url.replace(':8080', ':3000')
         
-        # 構建 QR code URL（指向 Guest 留言頁面）
-        # 注意：URL 應該是公開的，不能是 localhost 或 127.0.0.1
-        qr_url = f"{api_base_url}/api/guest/message-page?token={token}"
+        if not frontend_url:
+            frontend_url = 'http://localhost:3000'  # 最後的回退值
+            print("⚠️ 警告: FRONTEND_URL 未設置，使用預設值（僅適用於開發環境）")
+            print("   生產環境請設置 FRONTEND_URL 環境變數，例如: https://epaper-doorplate.vercel.app")
+        
+        # 構建 QR code URL（指向前端 Guest 留言頁面）
+        qr_url = f"{frontend_url}/guest/message?token={token}"
         print(f"生成 Guest QR Code URL: {qr_url}")
         
         # 檢查 URL 是否為本地地址（警告）
-        if 'localhost' in api_base_url or '127.0.0.1' in api_base_url:
-            print("⚠️ 警告: API_BASE_URL 是本地地址，Guest QR Code 可能無法從外部訪問")
-            print("   請設置 PUBLIC_API_URL 環境變數為公開域名，例如: https://your-backend.railway.app")
+        if 'localhost' in frontend_url or '127.0.0.1' in frontend_url:
+            print("⚠️ 警告: FRONTEND_URL 是本地地址，Guest QR Code 可能無法從外部訪問")
+            print("   請設置 FRONTEND_URL 環境變數為公開域名，例如: https://epaper-doorplate.vercel.app")
         
         try:
             # 創建 QR code
