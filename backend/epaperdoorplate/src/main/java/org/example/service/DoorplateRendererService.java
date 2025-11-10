@@ -293,9 +293,19 @@ public class DoorplateRendererService {
         
         for (int i = 0; i < elements.size(); i++) {
             Map<String, Object> element = elements.get(i);
+            String elementType = element.get("type").toString();
+            System.out.println("📝 處理元素 #" + (i + 1) + ": type=" + elementType + ", id=" + element.get("id"));
+            
+            // 如果是 guestQRCode，檢查 token
+            if ("guestQRCode".equals(elementType)) {
+                Object token = element.get("guestQRCodeToken");
+                System.out.println("🔍 Guest QR Code 元素 - Token: " + (token != null ? token.toString() : "null"));
+                System.out.println("   元素所有鍵: " + element.keySet());
+            }
+            
             json.append("    {\n");
             json.append("      \"id\": \"").append(escapeJsonString(element.getOrDefault("_id", element.get("id")).toString())).append("\",\n");
-            json.append("      \"type\": \"").append(escapeJsonString(element.get("type").toString())).append("\",\n");
+            json.append("      \"type\": \"").append(escapeJsonString(elementType)).append("\",\n");
             json.append("      \"name\": \"").append(escapeJsonString(element.getOrDefault("name", element.getOrDefault("Name", "")).toString())).append("\",\n");
             json.append("      \"x\": ").append(element.get("x")).append(",\n");
             json.append("      \"y\": ").append(element.get("y")).append(",\n");
@@ -304,12 +314,12 @@ public class DoorplateRendererService {
             json.append("      \"zIndex\": ").append(element.getOrDefault("zIndex", 1)).append("\n");
             
             // 根據元素類型添加特定屬性
-            if ("label".equals(element.get("type")) || "dynamicText".equals(element.get("type")) || "text".equals(element.get("type"))) {
+            if ("label".equals(elementType) || "dynamicText".equals(elementType) || "text".equals(elementType)) {
                 json.append("      ,\"text\": \"").append(escapeJsonString(element.getOrDefault("text", "").toString())).append("\"\n");
                 json.append("      ,\"fontSize\": ").append(element.getOrDefault("fontSize", 16)).append("\n");
                 json.append("      ,\"color\": \"").append(escapeJsonString(element.getOrDefault("color", "#000000").toString())).append("\"\n");
                 json.append("      ,\"textDirection\": \"").append(escapeJsonString(element.getOrDefault("textDirection", "horizontal").toString())).append("\"\n");
-            } else if ("image".equals(element.get("type")) || "dynamicImage".equals(element.get("type"))) {
+            } else if ("image".equals(elementType) || "dynamicImage".equals(elementType)) {
                 Object imageUrl = element.getOrDefault("imageUrl", "");
                 Object content = element.getOrDefault("content", "");
                 Object imageId = element.getOrDefault("imageId", "");
@@ -327,18 +337,23 @@ public class DoorplateRendererService {
                 json.append("      ,\"blackThreshold\": ").append(element.getOrDefault("blackThreshold", 128)).append("\n");
                 json.append("      ,\"whiteThreshold\": ").append(element.getOrDefault("whiteThreshold", 128)).append("\n");
                 json.append("      ,\"contrast\": ").append(element.getOrDefault("contrast", 1.0)).append("\n");
-            } else if ("qrCode".equals(element.get("type"))) {
+            } else if ("qrCode".equals(elementType)) {
                 json.append("      ,\"content\": \"").append(escapeJsonString(element.getOrDefault("content", "").toString())).append("\"\n");
-            } else if ("guestQRCode".equals(element.get("type"))) {
+            } else if ("guestQRCode".equals(elementType)) {
                 // Guest QR Code 需要 token
+                System.out.println("🔧 處理 guestQRCode 類型元素");
                 Object token = element.get("guestQRCodeToken");
+                System.out.println("   Token 值: " + (token != null ? token.toString() : "null"));
+                System.out.println("   元素包含的鍵: " + element.keySet());
+                
                 if (token != null) {
                     json.append("      ,\"guestQRCodeToken\": \"").append(escapeJsonString(token.toString())).append("\"\n");
                     System.out.println("✅ 在 JSON 中添加 Guest QR Code Token: " + token.toString());
                 } else {
-                    System.err.println("⚠️ Guest QR Code 元素缺少 guestQRCodeToken");
+                    System.err.println("❌ Guest QR Code 元素缺少 guestQRCodeToken");
+                    System.err.println("   元素完整內容: " + element);
                 }
-            } else if ("barcode".equals(element.get("type"))) {
+            } else if ("barcode".equals(elementType)) {
                 json.append("      ,\"content\": \"").append(escapeJsonString(element.getOrDefault("content", "").toString())).append("\"\n");
             }
             
