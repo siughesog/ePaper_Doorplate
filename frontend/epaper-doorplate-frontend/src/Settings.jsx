@@ -23,16 +23,7 @@ export default function Settings() {
   useEffect(() => {
     loadSettings();
     loadLineBotInfo();
-    
-    // 每 5 秒檢查一次綁定狀態（驗證碼成功後自動更新）
-    const interval = setInterval(() => {
-      if (!settings.lineBound) {
-        loadSettings();
-      }
-    }, 5000);
-    
-    return () => clearInterval(interval);
-  }, [settings.lineBound]);
+  }, []);
 
   const loadLineBotInfo = async () => {
     try {
