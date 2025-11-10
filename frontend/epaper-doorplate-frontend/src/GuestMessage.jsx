@@ -38,12 +38,16 @@ export default function GuestMessage() {
           hintText: result.hintText || '請輸入您的留言',
           submitText: result.submitText || '發送留言'
         });
+        // 清除之前的錯誤訊息
+        setResult(null);
       } else {
-        setResult({ success: false, message: result.message || '載入設定失敗' });
+        // 統一處理錯誤訊息（不區分大小寫）
+        const errorMessage = result.message || '載入設定失敗';
+        setResult({ success: false, message: errorMessage });
       }
     } catch (error) {
       console.error('載入設定失敗:', error);
-      setResult({ success: false, message: '載入設定失敗' });
+      setResult({ success: false, message: '載入設定失敗，請稍後再試' });
     } finally {
       setLoading(false);
     }
@@ -87,13 +91,35 @@ export default function GuestMessage() {
     );
   }
 
-  if (result && !result.success && result.message === '無效的 QR Code') {
+  // 檢查是否為 QR code 相關錯誤（不區分大小寫）
+  const isQRCodeError = result && !result.success && result.message && (
+    result.message.includes('無效的 QR') || 
+    result.message.includes('無效的QR') ||
+    result.message.toLowerCase().includes('invalid qr') ||
+    result.message === '無效的 QR Code' ||
+    result.message === '無效的 QR code'
+  );
+
+  // 檢查是否為其他嚴重錯誤（需要單獨顯示）
+  const isCriticalError = result && !result.success && (
+    isQRCodeError ||
+    result.message?.includes('設備未綁定用戶') ||
+    result.message?.includes('用戶不存在') ||
+    result.message?.includes('設備未激活')
+  );
+
+  if (isCriticalError) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
           <XCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-slate-800 mb-2">無效的 QR Code</h1>
-          <p className="text-slate-600">請掃描正確的 QR Code</p>
+          <h1 className="text-2xl font-bold text-slate-800 mb-2">
+            {isQRCodeError ? '無效的 QR Code' : '無法載入頁面'}
+          </h1>
+          <p className="text-slate-600 mb-4">{result.message || '請檢查 QR Code 是否正確'}</p>
+          {isQRCodeError && (
+            <p className="text-sm text-slate-500">請確認您掃描的是正確的 QR Code</p>
+          )}
         </div>
       </div>
     );

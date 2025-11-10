@@ -613,27 +613,87 @@ class ApiService {
 
   // Guest 留言相關API（公開，不需要認證）
   async getGuestMessagePageSettings(token) {
-    const response = await fetch(`${this.baseURL}/api/guest/message-page?token=${encodeURIComponent(token)}`, {
-      method: 'GET',
-      credentials: 'include'
-    });
-    return response.json();
+    try {
+      const response = await fetch(`${this.baseURL}/api/guest/message-page?token=${encodeURIComponent(token)}`, {
+        method: 'GET',
+        credentials: 'include'
+      });
+      
+      // 嘗試解析 JSON，無論狀態碼如何
+      let data;
+      try {
+        data = await response.json();
+      } catch (jsonError) {
+        // 如果無法解析 JSON，返回錯誤對象
+        return {
+          success: false,
+          message: response.status === 400 ? '無效的 QR code' : `請求失敗: ${response.status} ${response.statusText}`
+        };
+      }
+      
+      // 如果響應不成功，確保返回包含 success: false 的對象
+      if (!response.ok) {
+        return {
+          success: false,
+          message: data.message || `請求失敗: ${response.status} ${response.statusText}`,
+          ...data
+        };
+      }
+      
+      return data;
+    } catch (error) {
+      console.error('❌ getGuestMessagePageSettings 失敗:', error);
+      return {
+        success: false,
+        message: '載入設定失敗，請稍後再試'
+      };
+    }
   }
 
   async submitGuestMessage(token, message) {
-    const formData = new URLSearchParams();
-    formData.append('token', token);
-    formData.append('message', message);
-    
-    const response = await fetch(`${this.baseURL}/api/guest/message`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: formData,
-      credentials: 'include'
-    });
-    return response.json();
+    try {
+      const formData = new URLSearchParams();
+      formData.append('token', token);
+      formData.append('message', message);
+      
+      const response = await fetch(`${this.baseURL}/api/guest/message`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: formData,
+        credentials: 'include'
+      });
+      
+      // 嘗試解析 JSON，無論狀態碼如何
+      let data;
+      try {
+        data = await response.json();
+      } catch (jsonError) {
+        // 如果無法解析 JSON，返回錯誤對象
+        return {
+          success: false,
+          message: response.status === 400 ? '提交留言失敗' : `請求失敗: ${response.status} ${response.statusText}`
+        };
+      }
+      
+      // 如果響應不成功，確保返回包含 success: false 的對象
+      if (!response.ok) {
+        return {
+          success: false,
+          message: data.message || `提交失敗: ${response.status} ${response.statusText}`,
+          ...data
+        };
+      }
+      
+      return data;
+    } catch (error) {
+      console.error('❌ submitGuestMessage 失敗:', error);
+      return {
+        success: false,
+        message: '提交留言失敗，請稍後再試'
+      };
+    }
   }
 }
 
