@@ -107,7 +107,7 @@ public class LineBotService {
     }
 
     /**
-     * 發送訊息到 Line
+     * 發送訊息到 Line（Push API）
      */
     public boolean sendMessage(String lineUserId, String message) {
         if (channelAccessToken == null || channelAccessToken.isEmpty()) {
@@ -140,6 +140,51 @@ public class LineBotService {
             return response.getStatusCode().is2xxSuccessful();
         } catch (Exception e) {
             System.err.println("發送 Line 訊息失敗: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    /**
+     * 回覆訊息到 Line（Reply API，用於 webhook 回覆）
+     */
+    public boolean replyMessage(String replyToken, String message) {
+        if (channelAccessToken == null || channelAccessToken.isEmpty()) {
+            System.err.println("Line Bot Channel Access Token 未設置");
+            return false;
+        }
+
+        try {
+            String url = "https://api.line.me/v2/bot/message/reply";
+            
+            Map<String, Object> requestBody = new HashMap<>();
+            requestBody.put("replyToken", replyToken);
+            
+            List<Map<String, Object>> messages = new ArrayList<>();
+            Map<String, Object> textMessage = new HashMap<>();
+            textMessage.put("type", "text");
+            textMessage.put("text", message);
+            messages.add(textMessage);
+            
+            requestBody.put("messages", messages);
+            
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setBearerAuth(channelAccessToken);
+            
+            HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
+            
+            ResponseEntity<String> response = restTemplate.postForEntity(url, request, String.class);
+            
+            if (response.getStatusCode().is2xxSuccessful()) {
+                System.out.println("✅ Line Bot 回覆訊息成功: " + message);
+                return true;
+            } else {
+                System.err.println("❌ Line Bot 回覆訊息失敗，狀態碼: " + response.getStatusCode());
+                return false;
+            }
+        } catch (Exception e) {
+            System.err.println("❌ 回覆 Line 訊息失敗: " + e.getMessage());
             e.printStackTrace();
             return false;
         }

@@ -76,6 +76,8 @@ public class SecurityConfig {
                 .requestMatchers("/", "/favicon.ico", "/error").permitAll()  // 允许根路径和错误页面
                 .requestMatchers("/api/auth/**").permitAll()
                 .requestMatchers("/api/public/**").permitAll()
+                .requestMatchers("/api/line/webhook").permitAll()  // Line Bot Webhook（公開，不需要認證）
+                .requestMatchers("/api/guest/**").permitAll()  // Guest 留言相關 API（公開）
                 .requestMatchers("/uploads/**").permitAll()
                 .requestMatchers("/images/**").permitAll()
                 .requestMatchers("/device/activate").permitAll()

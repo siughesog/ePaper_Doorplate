@@ -35,10 +35,23 @@ public class LineBotController {
             HttpServletRequest request) {
         
         try {
+            System.out.println("📥 收到 Line Bot Webhook 請求");
+            System.out.println("   Signature: " + (signature != null ? signature.substring(0, Math.min(20, signature.length())) + "..." : "null"));
+            
             // 驗證簽名
-            if (signature == null || !lineBotService.verifySignature(body, signature)) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            if (signature == null) {
+                System.err.println("❌ Line Bot Webhook 缺少簽名");
+                // Line 要求返回 200，即使驗證失敗也要返回 200 避免重試
+                return ResponseEntity.ok().build();
             }
+            
+            if (!lineBotService.verifySignature(body, signature)) {
+                System.err.println("❌ Line Bot Webhook 簽名驗證失敗");
+                // Line 要求返回 200，即使驗證失敗也要返回 200 避免重試
+                return ResponseEntity.ok().build();
+            }
+            
+            System.out.println("✅ Line Bot Webhook 簽名驗證成功");
 
             JsonNode root = objectMapper.readTree(body);
             JsonNode events = root.get("events");
@@ -50,20 +63,48 @@ public class LineBotController {
                     if ("message".equals(type)) {
                         JsonNode message = event.get("message");
                         String messageType = message.get("type").asText();
+                        String replyToken = event.has("replyToken") ? event.get("replyToken").asText() : null;
                         
                         if ("text".equals(messageType)) {
                             String text = message.get("text").asText();
-                            String lineUserId = event.get("source").get("userId").asText();
+                            JsonNode source = event.get("source");
+                            String lineUserId = source != null && source.has("userId") ? source.get("userId").asText() : null;
+                            
+                            if (lineUserId == null) {
+                                System.err.println("⚠️ 無法獲取 Line User ID");
+                                continue;
+                            }
+                            
+                            System.out.println("📩 收到 Line 訊息: " + text + " (User ID: " + lineUserId + ")");
                             
                             // 檢查是否為驗證碼（6位數字）
                             if (text.matches("\\d{6}")) {
+                                System.out.println("🔐 檢測到驗證碼: " + text);
                                 boolean success = lineBotService.verifyAndBind(text, lineUserId);
+                                
                                 if (success) {
-                                    // 發送成功訊息
-                                    lineBotService.sendMessage(lineUserId, "✅ Line Bot 綁定成功！");
+                                    System.out.println("✅ 驗證碼驗證成功，綁定 Line User ID: " + lineUserId);
+                                    // 使用 Reply API 回覆訊息
+                                    if (replyToken != null) {
+                                        lineBotService.replyMessage(replyToken, "✅ Line Bot 綁定成功！\n\n您現在可以接收訪客留言通知了。");
+                                    } else {
+                                        // 如果沒有 replyToken，使用 Push API
+                                        lineBotService.sendMessage(lineUserId, "✅ Line Bot 綁定成功！\n\n您現在可以接收訪客留言通知了。");
+                                    }
                                 } else {
-                                    // 發送失敗訊息
-                                    lineBotService.sendMessage(lineUserId, "❌ 驗證碼無效或已過期，請重新獲取驗證碼。");
+                                    System.out.println("❌ 驗證碼驗證失敗: " + text);
+                                    // 使用 Reply API 回覆訊息
+                                    if (replyToken != null) {
+                                        lineBotService.replyMessage(replyToken, "❌ 驗證碼無效或已過期。\n\n請重新在設定頁面生成驗證碼。");
+                                    } else {
+                                        // 如果沒有 replyToken，使用 Push API
+                                        lineBotService.sendMessage(lineUserId, "❌ 驗證碼無效或已過期。\n\n請重新在設定頁面生成驗證碼。");
+                                    }
+                                }
+                            } else {
+                                // 如果不是驗證碼，回覆提示訊息
+                                if (replyToken != null) {
+                                    lineBotService.replyMessage(replyToken, "請輸入 6 位數字驗證碼來綁定 Line Bot。\n\n驗證碼可以在設定頁面獲取。");
                                 }
                             }
                         }
