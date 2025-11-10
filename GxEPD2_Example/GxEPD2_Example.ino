@@ -338,12 +338,213 @@ void callActivateAPI(String uniqueId) {
 
   if (httpCode == HTTP_CODE_OK) {
     Serial.println("📥 HTTP 200，讀取響應...");
+    
+    // 檢查 Content-Length，如果太大就使用流式處理
+    String contentLengthStr = http.header("Content-Length");
+    String transferEncoding = http.header("Transfer-Encoding");
+    int contentLength = contentLengthStr.toInt();
+    Serial.println("   📊 Content-Length: " + String(contentLength) + " bytes");
+    Serial.println("   📊 Transfer-Encoding: " + transferEncoding);
+    Serial.println("   📊 可用內存: " + String(ESP.getFreeHeap()) + " bytes");
+    
+    // 如果 Content-Length 為 0 或不存在，可能是 chunked encoding，使用流式處理
+    // 如果響應太大（超過 50000 字符）或內存不足，使用流式處理
+    bool useStreaming = (contentLength == 0) || 
+                        (contentLengthStr.length() == 0) ||
+                        (transferEncoding.indexOf("chunked") >= 0) ||
+                        (contentLength > 50000) || 
+                        (ESP.getFreeHeap() < 100000);
+    
+    if (useStreaming) {
+      Serial.println("🔄 響應較大，使用流式處理...");
+      // 使用流式處理（類似 callDeviceStatusAPI）
+      WiFiClient* stream = http.getStreamPtr();
+      if (!stream) {
+        Serial.println("❌ 無法獲取流對象");
+        http.end();
+        return;
+      }
+      
+      // 等待數據開始傳輸
+      unsigned long timeout = millis();
+      while (stream->available() == 0 && (millis() - timeout) < 10000) {
+        delay(10);
+      }
+      
+      if (stream->available() == 0) {
+        Serial.println("❌ 無數據可用");
+        http.end();
+        return;
+      }
+      
+      // 流式解析 JSON 前綴
+      String jsonPrefix = "";
+      jsonPrefix.reserve(1000);
+      
+      bool success = false;
+      bool alreadyActivated = false;
+      String deviceID = "";
+      String activation_code = "";
+      String expire_at = "";
+      int binSize = 0;
+      bool foundBinData = false;
+      
+      const char* binDataMarker = "\"binData\":\"";
+      int markerLen = strlen(binDataMarker);
+      int markerMatch = 0;
+      unsigned long lastDataTime = millis();
+      
+      while ((http.connected() || stream->available() > 0) && !foundBinData) {
+        if (stream->available()) {
+          char c = stream->read();
+          lastDataTime = millis();
+          
+          if (c == binDataMarker[markerMatch]) {
+            markerMatch++;
+            if (markerMatch == markerLen) {
+              foundBinData = true;
+              Serial.println("✅ 找到 binData 標記");
+              break;
+            }
+          } else {
+            if (markerMatch > 0) {
+              for (int i = 0; i < markerMatch; i++) {
+                if (jsonPrefix.length() < 1000) {
+                  jsonPrefix += binDataMarker[i];
+                }
+              }
+              markerMatch = 0;
+            }
+            if (jsonPrefix.length() < 1000) {
+              jsonPrefix += c;
+            }
+          }
+        } else {
+          delay(10);
+          if (!http.connected() && (millis() - lastDataTime) > 2000) {
+            break;
+          }
+        }
+      }
+      
+      // 從 jsonPrefix 提取字段
+      if (jsonPrefix.indexOf("\"success\":true") >= 0) success = true;
+      if (jsonPrefix.indexOf("\"alreadyActivated\":true") >= 0) alreadyActivated = true;
+      
+      int deviceIDIdx = jsonPrefix.indexOf("\"deviceID\":\"");
+      if (deviceIDIdx >= 0) {
+        int startIdx = deviceIDIdx + 12;
+        int endIdx = jsonPrefix.indexOf("\"", startIdx);
+        if (endIdx > startIdx) deviceID = jsonPrefix.substring(startIdx, endIdx);
+      }
+      
+      int activationCodeIdx = jsonPrefix.indexOf("\"activation_code\":\"");
+      if (activationCodeIdx >= 0) {
+        int startIdx = activationCodeIdx + 19;
+        int endIdx = jsonPrefix.indexOf("\"", startIdx);
+        if (endIdx > startIdx) activation_code = jsonPrefix.substring(startIdx, endIdx);
+      }
+      
+      int expireAtIdx = jsonPrefix.indexOf("\"expire_at\":\"");
+      if (expireAtIdx >= 0) {
+        int startIdx = expireAtIdx + 13;
+        int endIdx = jsonPrefix.indexOf("\"", startIdx);
+        if (endIdx > startIdx) expire_at = jsonPrefix.substring(startIdx, endIdx);
+      }
+      
+      int binSizeIdx = jsonPrefix.indexOf("\"binSize\":");
+      if (binSizeIdx >= 0) {
+        int startIdx = binSizeIdx + 10;
+        int endIdx = jsonPrefix.indexOf(",", startIdx);
+        if (endIdx < 0) endIdx = jsonPrefix.indexOf("}", startIdx);
+        if (endIdx > startIdx) binSize = jsonPrefix.substring(startIdx, endIdx).toInt();
+      }
+      
+      jsonPrefix = "";
+      
+      if (!success) {
+        Serial.println("❌ success:false");
+        http.end();
+        return;
+      }
+      
+      if (alreadyActivated) {
+        if (deviceID.length() > 0) {
+          preferences.putString("deviceID", deviceID);
+          Serial.println("💾 已保存 deviceID: " + deviceID);
+        }
+        DeviceConfig newConfig;
+        newConfig.success = true;
+        newConfig.isActivated = true;
+        newConfig.needUpdate = false;
+        newConfig.refreshInterval = 300;
+        newConfig.hasBinData = foundBinData;
+        newConfig.binSize = binSize;
+        saveConfig(newConfig);
+        
+        if (foundBinData && binSize > 0) {
+          Serial.println("🔄 開始從 HTTP 流直接流式解碼 Base64...");
+          int decodedLen = base64DecodeStreamingFromHTTPStream(stream, http, binSize);
+          while (stream->available() > 0 || http.connected()) {
+            if (stream->available()) stream->read();
+            else delay(10);
+          }
+          http.end();
+          if (decodedLen > 0) {
+            Serial.println("✅ 流式解碼完成，總大小: " + String(decodedLen) + " bytes");
+          }
+        } else {
+          while (stream->available() > 0 || http.connected()) {
+            if (stream->available()) stream->read();
+            else delay(10);
+          }
+          http.end();
+        }
+      } else {
+        if (activation_code.length() > 0) {
+          activationInfo.activation_code = activation_code;
+          activationInfo.expire_at = expire_at;
+          activationInfo.isValid = true;
+          preferences.putString("activation_code", activation_code);
+          preferences.putString("expire_at", expire_at);
+          preferences.putULong("last_activate_time", millis() / 1000);
+          Serial.println("🔐 未激活，儲存激活碼：" + activation_code);
+        }
+        
+        if (foundBinData && binSize > 0) {
+          Serial.println("🔄 開始從 HTTP 流直接流式解碼 Base64...");
+          int decodedLen = base64DecodeStreamingFromHTTPStream(stream, http, binSize);
+          while (stream->available() > 0 || http.connected()) {
+            if (stream->available()) stream->read();
+            else delay(10);
+          }
+          http.end();
+          if (decodedLen > 0) {
+            Serial.println("✅ activate 的 binData 已成功顯示到 ePaper");
+            Serial.println("   📊 解碼長度: " + String(decodedLen) + " bytes");
+          }
+        } else {
+          while (stream->available() > 0 || http.connected()) {
+            if (stream->available()) stream->read();
+            else delay(10);
+          }
+          http.end();
+          Serial.println("ℹ️ activate 回應中沒有 binData");
+        }
+      }
+      return; // 流式處理完成，直接返回
+    }
+    
+    // 小響應：使用原來的簡單方法
+    Serial.println("📥 響應較小，使用簡單方法讀取...");
     String response = http.getString();
     size_t estimatedCapacity = response.length() * 2;
     DynamicJsonDocument doc(min(estimatedCapacity, (size_t)200000));
     DeserializationError error = deserializeJson(doc, response);
     if (error) {
       Serial.println("❌ JSON 解析錯誤: " + String(error.c_str()));
+      Serial.println("   📊 響應長度: " + String(response.length()) + " 字符");
+      Serial.println("   📊 可用內存: " + String(ESP.getFreeHeap()) + " bytes");
       http.end();
       return;
     }
