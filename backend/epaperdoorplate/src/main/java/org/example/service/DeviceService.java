@@ -359,14 +359,20 @@ public class DeviceService {
                 }
                 
                 int guestQRCodeCount = 0;
+                System.out.println("🔍 開始檢查所有元素，總數: " + elements.size());
                 for (Map<String, Object> element : elements) {
                     String elementType = (String) element.get("type");
+                    System.out.println("   元素類型: " + elementType + ", ID: " + element.get("id"));
                     if ("guestQRCode".equals(elementType)) {
                         guestQRCodeCount++;
                         element.put("guestQRCodeToken", guestQRCodeToken);
                         System.out.println("✅ 已為 Guest QR Code 元素添加 token");
                         System.out.println("   元素 ID: " + element.get("id"));
                         System.out.println("   元素位置: x=" + element.get("x") + ", y=" + element.get("y"));
+                        System.out.println("   Token 值: " + guestQRCodeToken);
+                        System.out.println("   添加後元素所有鍵: " + element.keySet());
+                        System.out.println("   驗證 token 是否存在: " + element.containsKey("guestQRCodeToken"));
+                        System.out.println("   驗證 token 值: " + element.get("guestQRCodeToken"));
                     }
                 }
                 
@@ -376,7 +382,17 @@ public class DeviceService {
                     System.out.println("📊 找到 " + guestQRCodeCount + " 個 Guest QR Code 元素");
                 }
                 
+                // 再次驗證 token 是否還在 elements 中
+                System.out.println("🔍 傳遞給 rendererService 前的最後檢查:");
+                for (Map<String, Object> element : elements) {
+                    if ("guestQRCode".equals(element.get("type"))) {
+                        System.out.println("   Guest QR Code 元素 - Token: " + element.get("guestQRCodeToken"));
+                        System.out.println("   元素所有鍵: " + element.keySet());
+                    }
+                }
+                
                 // 渲染門牌（直接返回數據，不保存文件）
+                System.out.println("🚀 調用 rendererService.renderDoorplate，傳遞 " + elements.size() + " 個元素");
                 DoorplateRendererService.RenderResult result = rendererService.renderDoorplate(elements, device.getCurrentTemplateId());
                 byte[] binData = result.getBinData();
                 
