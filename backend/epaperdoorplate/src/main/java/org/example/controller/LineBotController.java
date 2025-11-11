@@ -139,10 +139,8 @@ public class LineBotController {
                                 }
                             } else {
                                 System.out.println("ℹ️ 收到非驗證碼訊息: " + text);
-                                // 如果不是驗證碼，回覆提示訊息
-                                if (replyToken != null) {
-                                    lineBotService.replyMessage(replyToken, "請輸入 6 位數字驗證碼來綁定 Line Bot。\n\n驗證碼可以在設定頁面獲取。");
-                                }
+                                // 如果不是驗證碼，不發送任何訊息（僅處理 unbind 相關功能）
+                                // 移除綁定提示訊息
                             }
                         } else {
                             System.out.println("ℹ️ 忽略非文字訊息類型: " + messageType);
