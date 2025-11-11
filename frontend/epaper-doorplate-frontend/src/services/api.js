@@ -477,7 +477,8 @@ class ApiService {
   }
 
   async deviceStatus(deviceID) {
-    const response = await this.request(`${this.legacyBaseURL}/device/status?deviceID=${encodeURIComponent(deviceID)}`, {
+    // 前端查詢狀態時，傳遞 isDeviceRequest=false，不會改變設備狀態
+    const response = await this.request(`${this.legacyBaseURL}/device/status?deviceID=${encodeURIComponent(deviceID)}&isDeviceRequest=false`, {
       method: 'POST'
     });
     return response.json();

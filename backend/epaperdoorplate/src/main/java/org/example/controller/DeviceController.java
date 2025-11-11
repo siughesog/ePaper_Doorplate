@@ -40,8 +40,9 @@ public class DeviceController {
     }
 
     @PostMapping("/status")
-    public ResponseEntity<Map<String, Object>> status(@RequestParam("deviceID") String deviceId) {
-        return ResponseEntity.ok(deviceService.status(deviceId));
+    public ResponseEntity<Map<String, Object>> status(@RequestParam("deviceID") String deviceId,
+                                                       @RequestParam(value = "isDeviceRequest", defaultValue = "true") boolean isDeviceRequest) {
+        return ResponseEntity.ok(deviceService.status(deviceId, isDeviceRequest));
     }
 
     @GetMapping("/list")

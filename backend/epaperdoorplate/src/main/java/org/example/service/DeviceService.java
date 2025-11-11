@@ -358,8 +358,13 @@ public class DeviceService {
     }
 
     public Map<String, Object> status(String deviceId) {
+        return status(deviceId, true); // 默認是設備請求，會改變狀態
+    }
+
+    public Map<String, Object> status(String deviceId, boolean isDeviceRequest) {
         System.out.println("\n========== 設備狀態查詢 ==========");
         System.out.println("設備ID: " + deviceId);
+        System.out.println("請求來源: " + (isDeviceRequest ? "設備請求（會改變狀態）" : "前端查詢（不改變狀態）"));
         
         Map<String, Object> resp = new HashMap<>();
         Optional<Device> devOpt = deviceRepository.findByDeviceId(deviceId);
@@ -385,19 +390,28 @@ public class DeviceService {
         System.out.println("   - refreshInterval: " + device.getRefreshInterval());
 
         // 如果強制不更新為 true，則 needUpdate 永遠為 false
+        // 但只有設備請求時才保存這個改變（前端查詢時只讀取狀態）
         if (device.isForceNoUpdate()) {
-            device.setNeedUpdate(false);
-            System.out.println("   - 強制不更新已啟用，將 needUpdate 設為 false");
+            if (isDeviceRequest) {
+                device.setNeedUpdate(false);
+                System.out.println("   - 強制不更新已啟用，將 needUpdate 設為 false（設備請求，已保存）");
+            } else {
+                System.out.println("   - 強制不更新已啟用，needUpdate 應為 false（前端查詢，不保存）");
+            }
         }
 
-        // 每次設備發送 Status 請求時，更新 updatedAt（最後更新時間）
-        device.setUpdatedAt(LocalDateTime.now());
-        deviceRepository.save(device);
-        System.out.println("   - 已更新最後更新時間: " + device.getUpdatedAt());
+        // 只有設備請求時才更新 updatedAt（最後更新時間）
+        if (isDeviceRequest) {
+            device.setUpdatedAt(LocalDateTime.now());
+            deviceRepository.save(device);
+            System.out.println("   - 已更新最後更新時間: " + device.getUpdatedAt());
+        }
 
         resp.put("success", true);
         resp.put("isActivated", true);
-        resp.put("needUpdate", device.isNeedUpdate());
+        // 如果強制不更新為 true，響應中的 needUpdate 應該為 false（即使前端查詢不保存）
+        boolean responseNeedUpdate = device.isForceNoUpdate() ? false : device.isNeedUpdate();
+        resp.put("needUpdate", responseNeedUpdate);
         resp.put("refreshInterval", device.getRefreshInterval());
         
         // 如果有模板配置，嘗試獲取 bin 檔案
@@ -479,11 +493,13 @@ public class DeviceService {
                     resp.put("binData", base64Data);
                     resp.put("binSize", binData.length);
                     
-                    // 如果需要更新，標記為已更新（updatedAt 已在方法開始時更新）
-                    if (shouldGenerate) {
+                    // 如果需要更新，且是設備請求（不是前端查詢），才標記為已更新
+                    if (shouldGenerate && isDeviceRequest) {
                         device.setNeedUpdate(false);
                         deviceRepository.save(device);
-                        System.out.println("✅ 生成並返回 bin 數據（已標記為已更新，needUpdate 設為 false）:");
+                        System.out.println("✅ 生成並返回 bin 數據（設備請求，已標記為已更新，needUpdate 設為 false）:");
+                    } else if (shouldGenerate && !isDeviceRequest) {
+                        System.out.println("✅ 返回 bin 數據（前端查詢，不改變 needUpdate 狀態）:");
                     } else {
                         System.out.println("✅ 返回 bin 數據（無需更新）:");
                     }

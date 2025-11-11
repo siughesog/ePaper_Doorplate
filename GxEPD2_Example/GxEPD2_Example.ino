@@ -31,6 +31,16 @@ SPIClass hspi(HSPI);
 #define BUTTON_PIN_1 34
 #define BUTTON_PIN_2 35
 
+// 默認圖像數據（RLE 壓縮格式）
+// 格式說明：
+// - 非零字節：直接存儲兩個十六進制字符（如 "FF" = 0xFF）
+// - 連續0：存儲為 "(N)" 其中 N 是連續個數（如 "(100)" = 連續100個0）
+// - 前30300個字符（15150字節）的壓縮數據，後續161700個字符（80850字節）全部是0
+const char defaultImageCompressed[] PROGMEM = "(606)40(4)080080(5)200004(5)8040400008(5)20004002(59)080003F180106080060060180080C0000001F0200304(4)3FC0424C000DC0FFFC1F322300C00203(858)18FFE21180186180060033FFE080C0(3)03FF060600FFFE1FF8004448000C6003001B26619FFF0203(58)12C06211FC08610006001818009FFE(4)2007FFF0C3060030004DFA000C6003001164C0C0C0027FF983060C(4)0FF000C0(46)66D16213080C6301FFF80818018218000003FBFE0C0400C3060030004D7A3FFFF1FFFF1144C040C006086183060C(4)0FF000C0(46)64D3621798046200060001FFC7E210(4)200C0400C306003003F64C000C0103031166600FFE1F88418706(5)0C(49)3CD263FCB000600006000118C08210(4)201CFFF0C306003000C26C000C017B7B1F322008C60208418784(5)0C(49)1AFFE0C0F03FFFC006000118C08330000001FFFF3CC630FFFE1FFFE0C4EB1FCC6103021B133008C6020CC1858C0C(4)0C0000C0(46)12C46040603000C0060001FFC09FFE(5)2C8430C306003000EFFF1844407B7C1106000FFE027FF8858C0C(4)0C0000C0(46)33C46240F03000C7FFFE7918C08180(3)01FE2C8430C306003000E0E81844C00000110603C8C6020600CC8C0C(4)0FE000C0(846)7FFFE2439833FCC00F001918C1E1(3)01F9060CC6308306003001D0261844C00000117FF0C8C6078400CCCC0C(4)0FE000C0(46)09D8627F0E330CC00F0019FFC7DFFE(3)01060CFFF0C3063FFFF1DFFF184780FFFC1F6030CFFE1F7FF8C8C80C(4)0C0000C0(46)2AD0624FFE330CC01F801818078618000001F9FE0C0400FFFE00300146201FC700C30C1369B0C0C01E1860C8D80C0001F0000C0000C0(46)2AD062430C330CC036C01BFFE0861000000119020CC40083060030024626000700FFFC116730DFFF02184058580C(4)0C0000C0(46)69D062420C330CC06660181800863000000119020C6C008306003002473C000610C30C116730C0C00218C078580C(4)0C0000C0(46)49DF625A0C33FCC1C6381818008FE000000119FE0C38018306003000459801EF10C30C116DB0C0C0023F8070780C(4)0C0000C0(46)48C062FA0C3300C3861C3C180080E000000119020C3C01830600300044981FDF10FFFD3178B1E0C002038070700C(4)0C0000C0(46)08C067830C3000C6060667800083B8000001F9060C778303060030004C393839B0C3013160333C00020EE030300C(4)0C0000C0(846)08C1C003FC300780060041FFE79E0C000001011E0DC1F3033C03E00058ED0060F003FF277FF20FFF1E7830(60)0204(3)06(11)040010(5)5087(5)202020(1521)60(99)600007FE(85)3C(9)3FFFE7F660(37)0F8000F800300001FC(3)01FE0007C001FC000F000078(3)0183060C0000FF0006(5)F8(6)600003(7)2000618660(3)70000F0000F00001C001FC0003E001FF0003C0(15)1FC001FC00300001FE(3)01FE000FE001FF001FC000FC(3)0183060C0000FF0006(4)01FC(6)600003(7)2180610660000001F0001F8001FC0001C001FC0007F001FF000EE0(15)304003040030000183(3)018000182001830010C00186(3)018706(3)C0(6)0304(6)60(9)20666107FC(3)300030C0010C0003C00180000C000002000C20(15)300003000030000181800000018000180001818000400006(3)018784(3)C0(6)06(7)60(9)022C010660(3)300000C000040006C00180000C000006000830(15)300003000030000181801000018000180001818000C00002(3)01858C0C0000C00006(4)0600001E0004F000F8000300000FE0(3)1A1983066010000030000040000C0006C00180001800000C000830(815)3800038000300001818018000180001C0001810000C00006(4)858C0C0000C00006(4)0C00003F0007F80060000300003B80(3)3270C3F7FC180000300000C0000C000CC001F8001800000C000C20(15)1E0001E0003000018080180001FC000F0001830003800006(4)CC8C0C0000FE0006(4)0C0000618007180060000300003180(3)23C2633660180000300000C000380018C001DC001BE00008000740(15)078000780030000180C0000001FC0003C001FE0007000004(4)CCCC0C0000FE0006(4)0C0000C0C006080060000300006080(3)0386273660(3)3000008000700018C0000E001C7000180007C0(15)01C0001C003000018080000001800000E001FC0001C0000C(4)C8C80C0000C00006(4)0C0000C0C0060C0060000300002080(3)1FFC0737FE(3)30000180001C0030C000060018300018000CE0(16)E0000E0030000181800000018000007001800000600018001F0000C8D80C0000C000060000F8000C0000C0C0060C0060000300003180(3)7000073006(3)3000030000060031C000060018300010001830(16)6000060030000181800000018000003001800000600030(4)58580C0000C00006(4)060000C0C0060C0060000300001F(5)60033016(3)300006000006007FE000060018300030001830(16)6000060030000181800000018000003001800000600070(4)78580C0000C00006(4)060000C0C0060C00600003000020(4)186183354E(3)30000E0000060000C000060008300030001830(15)606006060030000183001000018000303001800020E000E0(4)70780C0000C00006(4)0306006180060C00600003000020(4)1861833D2E10000030001C00020E0000C0020C000C300030001830(815)3FC003FC00300001FE00180001FE001FE00180003FC001FF(4)70700C0000C00006(4)01FC003F80060C0060000300003E(4)186183FD26180001FC003FE003FC0000C003FC0007E00030000EE0(15)1F0001F000300001FC00180001FF000F800180000F8001FF(4)30300C0000C00006(5)F8001E00060C0060000300003FC0(3)1861830904180001FE003FE000F80000C000F00003C000300007C0(68)2060(3)1FFF80003C(90)6060(3)180080(92)6060(98)31C0(98)1F(1347)080040(8)80(12)40(17)80(4)C0(51)6018004060030C(3)07C0800180039BE30FF6007F3F80806007E0(6)100000806000300000980FCFC000C0(51)33FFE04060060840(3)0FFC018000F1630907F8633180C0F007E000C00C1FFFF831FFC08060003000008C000C4000C0(51)1818004FFF0C78C0(4)8003800021730FEFF0633187F998002000C00C0FFFF02580C080601FFFE000C40008407FFF80(850)081800C10C18318000000FEFF87FFFE02573082800633180830C002000C40C001000CDA2C08060100020FFFF1FC840400180(50)01FFC3F108111B(5)8003000027730FE7F86331808606006000C60C001000C9A6C18460100020C0C0000848400080(50)0118C04108030E60(4)800608003E530905587F3F87FDFA006000C30800100079A4C7F46010002080C0001868400080(50)0118C04198060C30000007FFFC04080306D30FF7F8018004900000F000C108001C0035FFC0846003FF0080C60FF0785FFE80(50)01FFC04FFF0EFFF8(5)0C08018713(3)018004900000F000C118001E002588C0847E(3)FCC400300000C0(51)7918C040C01E0C18(3)07F81808000D9303FFC0FFFFC7F7D6009000C0180013806788C08460(3)8C4C(4)C0(51)1918C0F080120C(3)07E41839FFC018D30200400618049456019800C0100010E0FFFFC08460000001844C0FDFF008C0(51)19FFC3EFFF021FE0(3)0418780C003FD303FFC01C0C069456019800C03000107013B0C084603FFFF1847800082018C0(851)181803C30C023860000007E7F84808008213020040780707F7D6030C00C43000100055A0C0B460018C0184700FCC6018FF(51)1BFFE043080278C01800046408080800821303FFC0FF3FC08456030C00DC7000100055A0C1E460018C01847008C64018C0(51)181800431802CCC03800046408080801BFD3020040E321C0C7D6060600F0D8001000D3A0C78460010C018C6108C3C038C0(51)18180047F00207801C000467F8080801928303FFC0212107FCD60C0303C18C00100093BEC60460030C01BCF108C3803CC0(51)3C1800407002070008000464080808011A8300C60821210084461C018303060010009180C00460070C1101F108C7C026C0(51)67800041DC021DC0080007E418080C03020301860823210084463800C00E030010001180C00E600E0C33039B0FDEF063C0(51)41FFE3CF0602F878180004047809FFE33FCE1F07F83F3F0084CC7000601C010010001183803FFE3C07F3060E083838C1FFC";
+const int defaultImageCompressedLen = 6124; // 壓縮後長度（字符數）
+const int defaultImageZeroTailLen = 161700; // 後續0的長度（十六進制字符數）
+const int defaultImageTotalBytes = 192000; // 總字節數（800*480*2 = 96000黑色 + 96000紅色）
+
 // WiFi / API
 const char* default_ssid = "";
 const char* default_password = "";
@@ -89,6 +99,7 @@ void goToDeepSleep(int sleepSeconds, bool isActivated);
 int base64DecodeStreaming(const String& base64Str, int expectedSize);
 int base64DecodeStreamingFromResponse(const String& response, int startIdx, int endIdx, int expectedSize);
 int base64DecodeStreamingFromHTTPStream(WiFiClient* stream, HTTPClient& http, int expectedSize);
+void displayDefaultImage();
 
 // --- display object ---
 // NOTE: keep the display object defined in your included display_selection headers.
@@ -132,12 +143,8 @@ void setup() {
     Serial.println("⚠️ WiFi 憑證未設置");
   }
 
-  if (!wifiConnected) {
-    startAPMode();
-    return;
-  }
-
   // display 初始化 —— 保留你原本流程（RP2040 / HSPI 支援）
+  // 無論 WiFi 是否連接，都需要初始化 display（WiFi 失敗時需要顯示默認圖像）
   #if defined(ARDUINO_ARCH_RP2040) && (defined(ARDUINO_RASPBERRY_PI_PICO) || defined(ARDUINO_RASPBERRY_PI_PICO_W))
     display.epd2.selectSPI(SPIn, SPISettings(4000000, MSBFIRST, SPI_MODE0));
     pinMode(15, INPUT_PULLUP);
@@ -155,6 +162,15 @@ void setup() {
   delay(1000);
   display.fillScreen(GxEPD_WHITE);
   delay(1000);
+
+  // 檢查 WiFi 連接狀態
+  if (!wifiConnected) {
+    // WiFi 連接失敗，顯示默認圖像
+    Serial.println("📺 WiFi 連接失敗，顯示默認圖像");
+    displayDefaultImage();
+    startAPMode();
+    return;
+  }
 
   String deviceID = preferences.getString("deviceID", "");
   if (deviceID.length() > 0) {
@@ -1610,6 +1626,258 @@ void callDeviceStatusAPI(String deviceID) {
   savedConfig.binSize = binSize;
   saveConfig(savedConfig);
   return;
+}
+
+// 十六進制字符轉字節
+uint8_t hexCharToByte(char c) {
+  if (c >= '0' && c <= '9') return c - '0';
+  if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+  if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+  return 0;
+}
+
+// 從 PROGMEM 讀取字符
+char readProgMemChar(const char* str, int idx) {
+  return pgm_read_byte_near(str + idx);
+}
+
+// RLE 解壓並顯示默認圖像
+void displayDefaultImage() {
+  Serial.println("\n========== 顯示默認圖像 ==========");
+  Serial.println("📺 開始解壓並顯示默認圖像數據");
+  
+  // 檢查壓縮數據是否已設置
+  if (defaultImageCompressedLen == 0) {
+    Serial.println("⚠️ 默認圖像數據未設置，跳過顯示");
+    return;
+  }
+  
+  // 分配緩衝區（和 binData 一樣的格式：連續寫入，前 CHUNK_SIZE 是黑色，後 CHUNK_SIZE 是紅色）
+  uint8_t* buffer = (uint8_t*)malloc(CHUNK_SIZE * 2);
+  if (!buffer) {
+    Serial.println("❌ 無法分配緩衝區內存");
+    return;
+  }
+  
+  uint8_t* bBuf = buffer;
+  uint8_t* rBuf = buffer + CHUNK_SIZE;
+  
+  int totalBytes = 0;
+  int bufferIdx = 0;  // 連續寫入 buffer，和 binData 一樣
+  int round = 0;
+  int compressedIdx = 0;
+  int zeroTailRemaining = defaultImageZeroTailLen;
+  
+  Serial.println("   📊 壓縮數據長度: " + String(defaultImageCompressedLen) + " 字符");
+  Serial.println("   📊 後續0長度: " + String(defaultImageZeroTailLen) + " 字符");
+  Serial.println("   📊 總字節數: " + String(defaultImageTotalBytes) + " bytes");
+  
+  // 解析 RLE 壓縮數據（解壓後前 96000 字節是黑色數據，後 96000 字節是紅色數據（全0））
+  int decodedFromCompressed = 0;  // 從壓縮數據解出的字節數
+  bool printFirstBytes = true;   // 是否打印前幾個字節
+  int bytesToPrint = 100;         // 打印前多少個字節
+  int bytesPrinted = 0;           // 已打印的字節數
+  
+  Serial.println("   🔍 開始解壓，將打印前 " + String(bytesToPrint) + " 個字節的十六進制值");
+  
+  while (compressedIdx < defaultImageCompressedLen && totalBytes < defaultImageTotalBytes) {
+    char c1 = readProgMemChar(defaultImageCompressed, compressedIdx);
+    
+    if (c1 == '\0') {
+      Serial.println("⚠️ 遇到字符串結束符，停止解壓");
+      break; // 字符串結束
+    }
+    
+    // 檢查是否為連續0標記 "(N)"
+    if (c1 == '(') {
+      // 找到 "(" 標記，讀取數字直到 ")"
+      compressedIdx++;
+      int zeroCount = 0;
+      while (compressedIdx < defaultImageCompressedLen) {
+        char digit = readProgMemChar(defaultImageCompressed, compressedIdx);
+        if (digit == ')') {
+          compressedIdx++; // 跳過 ")"
+          break; // 結束
+        }
+        if (digit >= '0' && digit <= '9') {
+          zeroCount = zeroCount * 10 + (digit - '0');
+          compressedIdx++;
+        } else {
+          break; // 遇到非數字字符，結束
+        }
+      }
+      
+      // 打印前幾個零字節
+      if (printFirstBytes && bytesPrinted < bytesToPrint) {
+        Serial.print("   [連續0: " + String(zeroCount) + " 個] ");
+        int printCount = min(zeroCount, bytesToPrint - bytesPrinted);
+        for (int p = 0; p < printCount && p < 20; p++) {  // 最多打印20個
+          Serial.print("00 ");
+        }
+        if (zeroCount > 20) Serial.print("...");
+        Serial.println();
+        bytesPrinted += printCount;
+        if (bytesPrinted >= bytesToPrint) {
+          printFirstBytes = false;
+          Serial.println("   ... (後續字節不再打印)");
+        }
+      }
+      
+      // 填充連續的0（連續寫入 buffer，和 binData 一樣）
+      for (int i = 0; i < zeroCount && totalBytes < defaultImageTotalBytes; i++) {
+        if (bufferIdx >= CHUNK_SIZE * 2) {
+          // 緩衝區滿了，寫入顯示
+          display.writeImagePart(
+            bBuf, rBuf,
+            0, 0, 800, 8,
+            0, round * 8, 800, 8,
+            true, false, false
+          );
+          round++;
+          bufferIdx = 0;
+          delay(50);
+        }
+        buffer[bufferIdx++] = 0;
+        totalBytes++;
+        decodedFromCompressed++;
+      }
+      continue;
+    }
+    
+    // 讀取兩個十六進制字符組成一個字節
+    if (compressedIdx + 1 < defaultImageCompressedLen) {
+      char c2 = readProgMemChar(defaultImageCompressed, compressedIdx + 1);
+      uint8_t byte = (hexCharToByte(c1) << 4) | hexCharToByte(c2);
+      
+      // 打印前幾個非零字節
+      if (printFirstBytes && bytesPrinted < bytesToPrint) {
+        if (bytesPrinted % 16 == 0) {
+          Serial.print("   [" + String(bytesPrinted) + "] ");
+        }
+        if (byte < 0x10) Serial.print("0");
+        Serial.print(byte, HEX);
+        Serial.print(" ");
+        bytesPrinted++;
+        if (bytesPrinted % 16 == 0) {
+          Serial.println();
+        }
+        if (bytesPrinted >= bytesToPrint) {
+          printFirstBytes = false;
+          Serial.println();
+          Serial.println("   ... (後續字節不再打印)");
+        }
+      }
+      
+      if (bufferIdx >= CHUNK_SIZE * 2) {
+        // 緩衝區滿了，寫入顯示
+        display.writeImagePart(
+          bBuf, rBuf,
+          0, 0, 800, 8,
+          0, round * 8, 800, 8,
+          true, false, false
+        );
+        round++;
+        bufferIdx = 0;
+        delay(50);
+      }
+      
+      buffer[bufferIdx++] = byte;
+      totalBytes++;
+      decodedFromCompressed++;
+      compressedIdx += 2;
+    } else {
+      Serial.println("⚠️ 壓縮數據不完整，無法讀取完整的十六進制字節");
+      break; // 數據不完整
+    }
+  }
+  
+  if (bytesPrinted % 16 != 0 && bytesPrinted < bytesToPrint) {
+    Serial.println();
+  }
+  
+  Serial.println("   📊 從壓縮數據解出: " + String(decodedFromCompressed) + " bytes");
+  
+  // 打印 buffer 的前幾個字節（驗證寫入是否正確）
+  Serial.println("   🔍 驗證 buffer 前 64 個字節:");
+  Serial.print("   ");
+  for (int i = 0; i < 64 && i < bufferIdx; i++) {
+    if (buffer[i] < 0x10) Serial.print("0");
+    Serial.print(buffer[i], HEX);
+    Serial.print(" ");
+    if ((i + 1) % 16 == 0) {
+      Serial.println();
+      Serial.print("   ");
+    }
+  }
+  Serial.println();
+  
+  // 填充後續的0（如果還有剩餘空間）
+  while (zeroTailRemaining > 0 && totalBytes < defaultImageTotalBytes) {
+    if (bufferIdx >= CHUNK_SIZE * 2) {
+      // 緩衝區滿了，寫入顯示
+      display.writeImagePart(
+        bBuf, rBuf,
+        0, 0, 800, 8,
+        0, round * 8, 800, 8,
+        true, false, false
+      );
+      round++;
+      bufferIdx = 0;
+      delay(50);
+    }
+    buffer[bufferIdx++] = 0;
+    totalBytes++;
+    zeroTailRemaining -= 2; // 每個字節對應2個十六進制字符
+  }
+  
+  // 如果總字節數還沒到 192000，填充剩餘部分（紅色部分全0）
+  while (totalBytes < defaultImageTotalBytes) {
+    if (bufferIdx >= CHUNK_SIZE * 2) {
+      display.writeImagePart(
+        bBuf, rBuf,
+        0, 0, 800, 8,
+        0, round * 8, 800, 8,
+        true, false, false
+      );
+      round++;
+      bufferIdx = 0;
+      delay(50);
+    }
+    buffer[bufferIdx++] = 0;
+    totalBytes++;
+  }
+  
+  // 處理剩餘的數據
+  if (bufferIdx > 0) {
+    // 填充不足的部分
+    if (bufferIdx < CHUNK_SIZE * 2) {
+      memset(buffer + bufferIdx, 0, CHUNK_SIZE * 2 - bufferIdx);
+    }
+    
+    display.writeImagePart(
+      bBuf, rBuf,
+      0, 0, 800, 8,
+      0, round * 8, 800, 8,
+      true, false, false
+    );
+    round++;
+  }
+  
+  free(buffer);
+  
+  // 刷新顯示
+  display.refresh();
+  delay(12000);
+  display.powerOff();
+  
+  Serial.println("✅ 默認圖像顯示完成");
+  Serial.println("   📊 總共寫入: " + String(totalBytes) + " bytes");
+  Serial.println("   📊 從壓縮數據解出: " + String(decodedFromCompressed) + " bytes");
+  Serial.println("   📊 總共 " + String(round) + " 塊");
+  if (totalBytes != defaultImageTotalBytes) {
+    Serial.println("⚠️ 警告：總字節數不匹配！預期: " + String(defaultImageTotalBytes) + ", 實際: " + String(totalBytes));
+  }
+  Serial.println("========== 默認圖像顯示完成 ==========\n");
 }
 
 // goToDeepSleep（同你原本）
