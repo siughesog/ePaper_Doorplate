@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 """
 压缩默认图像数据为 RLE 格式（从文件读取）
-使用方法：
-1. 将前30300个字符的十六进制数据保存到 input_hex.txt 文件
+使用方法：42342
+1. 将前39142个字符的十六进制数据保存到 input_hex.txt 文件
 2. 运行: python compress_default_image_file.py
 """
 
@@ -75,7 +75,7 @@ def main():
     except FileNotFoundError:
         print(f"❌ 未找到文件 {input_file}")
         print()
-        print("请创建 input_hex.txt 文件，包含前30300个字符的十六进制数据")
+        print("请创建 input_hex.txt 文件，42342")
         print("或者直接在这里粘贴数据（按Enter后输入，Ctrl+D/Ctrl+Z结束）:")
         print()
         
@@ -101,10 +101,10 @@ def main():
     print(f"输入数据长度: {len(hex_data)} 字符")
     
     # 只处理前30300个字符
-    if len(hex_data) > 30300:
+    if len(hex_data) > 42342:
         print(f"⚠️  数据长度超过30300，只处理前30300个字符")
-        hex_data = hex_data[:30300]
-    elif len(hex_data) < 30300:
+        hex_data = hex_data[:42342]
+    elif len(hex_data) < 42342:
         print(f"⚠️  数据长度少于30300，将使用实际长度: {len(hex_data)}")
     
     print()
