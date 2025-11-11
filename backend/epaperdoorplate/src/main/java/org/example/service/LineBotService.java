@@ -131,7 +131,7 @@ public class LineBotService {
     public boolean sendUnboundNotification(String lineUserId) {
         String message = "⚠️ 未綁定狀態\n\n" +
                 "您目前尚未綁定 Line Bot。\n\n" +
-                "此 Bot 不會響應非激活碼的消息。\n\n" +
+                "此 Bot 不會響應非驗證碼的消息。\n\n" +
                 "📋 綁定步驟：\n" +
                 "1. 前往設定頁面\n" +
                 "2. 點擊「生成驗證碼」\n" +
