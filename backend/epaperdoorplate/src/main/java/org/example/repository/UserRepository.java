@@ -9,6 +9,8 @@ public interface UserRepository extends MongoRepository<User, String> {
 
     Optional<User> findByUsername(String username);
 
+    Optional<User> findByLineUserId(String lineUserId);
+
     // 你也可以加上其他查詢條件
     // Optional<User> findByUsernameAndPasswordHash(String username, String passwordHash);
 }

@@ -119,15 +119,45 @@ public class LineBotService {
     }
 
     /**
+     * 根據 Line User ID 查找用戶
+     */
+    public Optional<User> findUserByLineUserId(String lineUserId) {
+        return userRepository.findByLineUserId(lineUserId);
+    }
+
+    /**
+     * 發送未綁定通知消息
+     */
+    public boolean sendUnboundNotification(String lineUserId) {
+        String message = "⚠️ 未綁定狀態\n\n" +
+                "您目前尚未綁定 Line Bot。\n\n" +
+                "此 Bot 不會響應非激活碼的消息。\n\n" +
+                "📋 綁定步驟：\n" +
+                "1. 前往設定頁面\n" +
+                "2. 點擊「生成驗證碼」\n" +
+                "3. 在此對話中輸入 6 位數字驗證碼\n\n" +
+                "綁定成功後，您就可以接收訪客留言通知了！";
+        
+        return sendMessage(lineUserId, message);
+    }
+
+    /**
      * 解除 Line 綁定
      */
     public void unbindLine(String username) {
         Optional<User> userOpt = userRepository.findByUsername(username);
         if (userOpt.isPresent()) {
             User user = userOpt.get();
+            String lineUserId = user.getLineUserId();
             user.setLineUserId(null);
             user.setLineBound(false);
             userRepository.save(user);
+            
+            // 如果用戶之前有綁定 Line，發送未綁定通知
+            if (lineUserId != null && !lineUserId.isEmpty()) {
+                System.out.println("📤 發送未綁定通知給 Line User ID: " + lineUserId);
+                sendUnboundNotification(lineUserId);
+            }
         }
     }
 

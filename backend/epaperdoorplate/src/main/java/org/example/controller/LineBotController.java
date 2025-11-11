@@ -79,7 +79,42 @@ public class LineBotController {
                     String type = event.has("type") ? event.get("type").asText() : "unknown";
                     System.out.println("📨 處理事件類型: " + type);
                     
-                    if ("message".equals(type)) {
+                    if ("follow".equals(type)) {
+                        // 處理用戶首次添加 bot 的事件
+                        System.out.println("👋 用戶首次添加 bot");
+                        JsonNode source = event.get("source");
+                        String lineUserId = null;
+                        String replyToken = event.has("replyToken") ? event.get("replyToken").asText() : null;
+                        
+                        if (source != null && source.has("userId")) {
+                            lineUserId = source.get("userId").asText();
+                        }
+                        
+                        if (lineUserId != null) {
+                            System.out.println("   Line User ID: " + lineUserId);
+                            // 檢查用戶是否已綁定
+                            java.util.Optional<org.example.model.User> userOpt = lineBotService.findUserByLineUserId(lineUserId);
+                            
+                            if (userOpt.isEmpty() || !userOpt.get().isLineBound()) {
+                                // 用戶未綁定，發送未綁定通知
+                                System.out.println("   ⚠️ 用戶未綁定，發送未綁定通知");
+                                if (replyToken != null) {
+                                    lineBotService.replyMessage(replyToken, "⚠️ 未綁定狀態\n\n" +
+                                            "您目前尚未綁定 Line Bot。\n\n" +
+                                            "此 Bot 不會響應非激活碼的消息。\n\n" +
+                                            "📋 綁定步驟：\n" +
+                                            "1. 前往設定頁面\n" +
+                                            "2. 點擊「生成驗證碼」\n" +
+                                            "3. 在此對話中輸入 6 位數字驗證碼\n\n" +
+                                            "綁定成功後，您就可以接收訪客留言通知了！");
+                                } else {
+                                    lineBotService.sendUnboundNotification(lineUserId);
+                                }
+                            } else {
+                                System.out.println("   ✅ 用戶已綁定");
+                            }
+                        }
+                    } else if ("message".equals(type)) {
                         JsonNode message = event.get("message");
                         if (message == null) {
                             System.err.println("⚠️ 事件中沒有 message 欄位");
@@ -107,6 +142,10 @@ public class LineBotController {
                             }
                             
                             System.out.println("📩 收到 Line 訊息: " + text + " (User ID: " + lineUserId + ")");
+                            
+                            // 檢查用戶是否已綁定
+                            java.util.Optional<org.example.model.User> userOpt = lineBotService.findUserByLineUserId(lineUserId);
+                            boolean isBound = userOpt.isPresent() && userOpt.get().isLineBound();
                             
                             // 檢查是否為驗證碼（6位數字）
                             if (text.matches("\\d{6}")) {
@@ -138,9 +177,19 @@ public class LineBotController {
                                     }
                                 }
                             } else {
+                                // 非驗證碼消息
                                 System.out.println("ℹ️ 收到非驗證碼訊息: " + text);
-                                // 如果不是驗證碼，不發送任何訊息（僅處理 unbind 相關功能）
-                                // 移除綁定提示訊息
+                                
+                                if (!isBound) {
+                                    // 用戶未綁定，回覆提示
+                                    System.out.println("   ⚠️ 用戶未綁定，回覆提示");
+                                    if (replyToken != null) {
+                                        lineBotService.replyMessage(replyToken, "❌ 這不是激活碼。\n\n請輸入 6 位數字驗證碼來綁定 Line Bot。\n\n驗證碼可以在設定頁面獲取。");
+                                    } else {
+                                        lineBotService.sendMessage(lineUserId, "❌ 這不是激活碼。\n\n請輸入 6 位數字驗證碼來綁定 Line Bot。\n\n驗證碼可以在設定頁面獲取。");
+                                    }
+                                }
+                                // 如果已綁定，不發送任何訊息（僅處理通知功能）
                             }
                         } else {
                             System.out.println("ℹ️ 忽略非文字訊息類型: " + messageType);
