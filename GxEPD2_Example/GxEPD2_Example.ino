@@ -1515,6 +1515,12 @@ void callDeviceStatusAPI(String deviceID) {
   }
 
   if (!isActivated) {
+    // 保存 isActivated = false 的狀態到本地配置
+    savedConfig.isActivated = false;
+    savedConfig.needUpdate = false;
+    saveConfig(savedConfig);
+    Serial.println("💾 已保存 isActivated=false 到本地配置");
+    
     String existingId = preferences.getString("deviceID", "");
     if (existingId.length() > 0) {
       preferences.remove("deviceID");
