@@ -9,10 +9,6 @@ import org.example.repository.DeviceRepository;
 import org.example.repository.HardwareWhitelistRepository;
 import org.example.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.core.query.Criteria;
-import org.springframework.data.mongodb.core.query.Query;
-import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Service;
 
 import java.security.SecureRandom;
@@ -43,9 +39,6 @@ public class DeviceService {
 
     @Autowired
     private DoorplateLayoutService layoutService;
-
-    @Autowired
-    private MongoTemplate mongoTemplate;
 
     private static final SecureRandom RANDOM = new SecureRandom();
 
@@ -277,15 +270,13 @@ public class DeviceService {
 
         deviceRepository.save(device);
 
-        // 如果是新設備，確保 currentTemplateId 字段存在於數據庫中（即使為 null）
-        // 使用 MongoTemplate 的 Update 操作來確保字段被保存到數據庫
+        // 如果是新設備，設置默認的 currentTemplateId
         if (isNewDevice) {
-            Query query = new Query(Criteria.where("deviceId").is(deviceId));
-            Update update = new Update();
-            // 使用 $set 確保 currentTemplateId 字段被保存（即使值為 null）
-            // 這樣可以確保字段在數據庫中存在，方便後續查詢和更新
-            update.set("currentTemplateId", device.getCurrentTemplateId());
-            mongoTemplate.updateFirst(query, update, Device.class);
+            String defaultTemplateId = "6913570d276a830231a0c319";
+            device.setCurrentTemplateId(defaultTemplateId);
+            device.setNeedUpdate(true); // 新設備需要更新以顯示默認模板
+            deviceRepository.save(device);
+            System.out.println("✅ 新設備已設置默認模板 ID: " + defaultTemplateId);
         }
 
         // 綁定成功後，可以刪除此激活碼避免重複使用
