@@ -95,6 +95,11 @@ export default function CanvasEditor() {
 
   // 檢查元素是否可以與其他元素重疊
   const canOverlapWith = (elem1, elem2) => {
+    // Guest QR Code 可以與任何元素重疊
+    if (elem1.type === 'guestQRCode' || elem2.type === 'guestQRCode') {
+      return true;
+    }
+    
     // 文字和圖片之間可以重疊
     if ((elem1.type === 'label' || elem1.type === 'dynamicText') && 
         (elem2.type === 'image' || elem2.type === 'dynamicImage')) {
