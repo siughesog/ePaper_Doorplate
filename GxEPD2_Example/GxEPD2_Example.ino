@@ -516,6 +516,12 @@ void callActivateAPI(String uniqueId) {
           }
           http.end();
         }
+        
+        // 收到 alreadyActivated: true 後，自動調用 status API
+        if (deviceID.length() > 0) {
+          Serial.println("🔄 設備已激活，自動調用 status API...");
+          callDeviceStatusAPI(deviceID);
+        }
       } else {
         if (activation_code.length() > 0) {
           activationInfo.activation_code = activation_code;
@@ -648,6 +654,12 @@ void callActivateAPI(String uniqueId) {
           } else {
             Serial.println("❌ 分配 outBuf 失敗");
           }
+        }
+        
+        // 收到 alreadyActivated: true 後，自動調用 status API
+        if (deviceID.length() > 0) {
+          Serial.println("🔄 設備已激活，自動調用 status API...");
+          callDeviceStatusAPI(deviceID);
         }
       }
     } else {
