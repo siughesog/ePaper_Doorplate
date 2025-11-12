@@ -35,6 +35,54 @@ export default function DeviceManager() {
   
   const [statusMessage, setStatusMessage] = useState('');
 
+  // 檢查設備是否離線
+  const isDeviceOffline = (device) => {
+    if (!device.updatedAt) {
+      // 如果沒有更新時間，無法判斷，返回 false（不顯示離線）
+      return false;
+    }
+
+    try {
+      // 解析更新時間
+      let lastUpdateTime;
+      
+      // 如果是數組格式 [year, month, day, hour, minute, second]
+      if (Array.isArray(device.updatedAt)) {
+        const [year, month, day, hour = 0, minute = 0, second = 0] = device.updatedAt;
+        lastUpdateTime = new Date(year, month - 1, day, hour, minute, second);
+      } 
+      // 如果是字符串格式
+      else if (typeof device.updatedAt === 'string') {
+        lastUpdateTime = new Date(device.updatedAt);
+      }
+      // 如果是對象
+      else if (typeof device.updatedAt === 'object') {
+        lastUpdateTime = new Date(device.updatedAt);
+      }
+      else {
+        return false;
+      }
+
+      // 檢查日期是否有效
+      if (isNaN(lastUpdateTime.getTime())) {
+        return false;
+      }
+
+      // 獲取刷新間隔（秒），默認為 300 秒
+      const refreshInterval = device.refreshInterval || 300;
+      
+      // 計算預期下次更新時間 = 最後更新時間 + 刷新間隔 + 1分鐘緩衝
+      const expectedNextUpdate = new Date(lastUpdateTime.getTime() + (refreshInterval * 1000) + (60 * 1000));
+      
+      // 如果現在時間超過預期下次更新時間，則設備可能離線
+      const now = new Date();
+      return now > expectedNextUpdate;
+    } catch (error) {
+      console.error('檢查設備離線狀態時發生錯誤:', error);
+      return false;
+    }
+  };
+
   // 載入裝置列表
   const loadDevices = async () => {
     setIsLoading(true);
@@ -183,12 +231,25 @@ export default function DeviceManager() {
     setShowEditModal(true);
   };
 
-  const DeviceCard = ({ device }) => (
-    <div className="bg-white rounded-xl shadow-lg border border-slate-200 p-6 hover:shadow-xl transition-all duration-300">
+  const DeviceCard = ({ device }) => {
+    const offline = isDeviceOffline(device);
+    
+    return (
+    <div className={`bg-white rounded-xl shadow-lg border p-6 hover:shadow-xl transition-all duration-300 ${offline ? 'border-red-300 bg-red-50' : 'border-slate-200'}`}>
+      {/* 離線警告提示 */}
+      {offline && (
+        <div className="mb-4 p-3 bg-red-100 border border-red-300 rounded-lg flex items-center space-x-2">
+          <WifiOff className="w-5 h-5 text-red-600" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-red-800">設備可能已斷線或發生問題，請查看</p>
+          </div>
+        </div>
+      )}
+      
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center space-x-3">
-          <div className="p-2 rounded-lg bg-blue-100">
-            <Smartphone className="w-5 h-5 text-blue-600" />
+          <div className={`p-2 rounded-lg ${offline ? 'bg-red-100' : 'bg-blue-100'}`}>
+            <Smartphone className={`w-5 h-5 ${offline ? 'text-red-600' : 'text-blue-600'}`} />
           </div>
           <div>
             <h3 className="font-semibold text-slate-800">{device.deviceName || '未命名裝置'}</h3>
@@ -301,7 +362,8 @@ export default function DeviceManager() {
         </div>
       </div>
     </div>
-  );
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
