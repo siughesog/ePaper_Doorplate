@@ -110,14 +110,14 @@ public class DeviceService {
             }
         }
 
-        // 檢查是否已經存在未過期的激活碼
+        // 檢查是否已經存在激活碼（只要設備還在發送activate請求，激活碼就有效，不過期）
         List<ActivationCode> existingCodes = activationCodeRepository.findByUniqueId(uniqueId);
         LocalDateTime now = LocalDateTime.now();
         
         if (!existingCodes.isEmpty()) {
-            // 查找未過期的激活碼（按創建時間降序排序，選擇最新的）
+            // 查找激活碼（按創建時間降序排序，選擇最新的）
+            // 激活碼不過期，只要設備還在發送activate請求就有效
             ActivationCode validCode = existingCodes.stream()
-                .filter(ac -> ac.getExpireAt() != null && ac.getExpireAt().isAfter(now))
                 .sorted((a, b) -> {
                     if (a.getCreatedAt() == null && b.getCreatedAt() == null) return 0;
                     if (a.getCreatedAt() == null) return 1;
@@ -128,42 +128,37 @@ public class DeviceService {
                 .orElse(null);
             
             if (validCode != null) {
-                System.out.println("✅ 發現未過期的激活碼，返回現有激活碼");
+                System.out.println("✅ 發現激活碼，返回現有激活碼（激活碼不過期，只要設備還在發送請求就有效）");
                 System.out.println("   - activation_code: " + validCode.getActivationCode());
-                System.out.println("   - expire_at: " + validCode.getExpireAt());
-                System.out.println("   - 共找到 " + existingCodes.size() + " 個激活碼記錄，其中 " + 
-                    existingCodes.stream().filter(ac -> ac.getExpireAt() != null && ac.getExpireAt().isAfter(now)).count() + 
-                    " 個未過期");
+                System.out.println("   - 共找到 " + existingCodes.size() + " 個激活碼記錄");
                 
                 resp.put("success", true);
                 resp.put("alreadyActivated", false);
                 resp.put("activation_code", validCode.getActivationCode());
-                resp.put("expire_at", validCode.getExpireAt().toString());
+                // 激活碼不過期，返回null
+                resp.put("expire_at", null);
                 return resp;
-            } else {
-                // 所有激活碼都已過期，刪除所有過期的激活碼
-                System.out.println("⚠️ 發現 " + existingCodes.size() + " 個激活碼記錄，但都已過期，將刪除並生成新的激活碼");
-                activationCodeRepository.deleteAll(existingCodes);
             }
         }
 
-        // 設備未激活或未綁定，且沒有未過期的激活碼，生成新的激活碼
+        // 設備未激活或未綁定，且沒有激活碼，生成新的激活碼
         String code = generateComplexActivationCode();
         ActivationCode ac = new ActivationCode();
         ac.setActivationCode(code);
         ac.setUniqueId(uniqueId);
         ac.setCreatedAt(now);
-        ac.setExpireAt(now.plusMinutes(5));
+        // 激活碼不過期，設置為null表示永不過期（只要設備還在發送activate請求就有效）
+        ac.setExpireAt(null);
         activationCodeRepository.save(ac);
 
-        System.out.println("✅ 生成新的激活碼");
+        System.out.println("✅ 生成新的激活碼（不過期，只要設備還在發送activate請求就有效）");
         System.out.println("   - activation_code: " + code);
-        System.out.println("   - expire_at: " + ac.getExpireAt());
+        System.out.println("   - expire_at: null (永不過期)");
 
         resp.put("success", true);
         resp.put("alreadyActivated", false);
         resp.put("activation_code", code);
-        resp.put("expire_at", ac.getExpireAt().toString());
+        resp.put("expire_at", null);
         
         // 嘗試找到並渲染激活碼顯示佈局
         try {
@@ -234,11 +229,8 @@ public class DeviceService {
             return resp;
         }
         ActivationCode ac = acOpt.get();
-        if (ac.getExpireAt() == null || ac.getExpireAt().isBefore(LocalDateTime.now())) {
-            resp.put("success", false);
-            resp.put("message", "activation code expired");
-            return resp;
-        }
+        // 激活碼不再有過期限制，只要設備還在發送activate請求就有效
+        // 移除過期檢查
 
         String uniqueId = ac.getUniqueId();
         Optional<Device> existingByUnique = deviceRepository.findByUniqueId(uniqueId);
