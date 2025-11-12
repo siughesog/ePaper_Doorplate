@@ -54,17 +54,23 @@ export default function DeviceManager() {
       } 
       // 如果是字符串格式（後端返回的格式：yyyy-MM-dd'T'HH:mm:ss，沒有時區信息）
       else if (typeof device.updatedAt === 'string') {
-        // 後端返回的是 LocalDateTime，沒有時區信息，需要當作本地時間處理
-        // 如果字符串包含 'T'，可能是 ISO 格式，直接解析
-        lastUpdateTime = new Date(device.updatedAt);
-        // 如果解析失敗或時間明顯不對（可能是時區問題），嘗試手動解析
-        if (isNaN(lastUpdateTime.getTime()) || lastUpdateTime.getFullYear() < 2000) {
-          // 嘗試手動解析 yyyy-MM-dd'T'HH:mm:ss 格式
-          const match = device.updatedAt.match(/(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/);
-          if (match) {
-            const [, year, month, day, hour, minute, second] = match;
-            lastUpdateTime = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), parseInt(hour), parseInt(minute), parseInt(second));
-          }
+        // 後端返回的是 LocalDateTime，沒有時區信息
+        // 假設後端服務器使用 UTC 時區，手動解析並明確指定為 UTC
+        const match = device.updatedAt.match(/(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/);
+        if (match) {
+          const [, year, month, day, hour, minute, second] = match;
+          // 使用 UTC 時間創建 Date 對象（後端服務器通常使用 UTC）
+          lastUpdateTime = new Date(Date.UTC(
+            parseInt(year), 
+            parseInt(month) - 1, 
+            parseInt(day), 
+            parseInt(hour), 
+            parseInt(minute), 
+            parseInt(second)
+          ));
+        } else {
+          // 如果格式不匹配，嘗試直接解析（可能包含時區信息）
+          lastUpdateTime = new Date(device.updatedAt);
         }
       }
       // 如果是對象
