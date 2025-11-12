@@ -33,6 +33,8 @@ public class Device {
 
     private Integer refreshInterval; // 門牌刷新間隔（秒）
 
+    private Integer lastRefreshInterval; // 設備最後一次更新時使用的刷新間隔（秒），用於判斷離線狀態
+
     private String currentDoorplateId; // 目前要顯示的門牌 ID
 
     private String currentTemplateId; // 目前使用的模板 ID

@@ -67,6 +67,13 @@ public class DeviceService {
                 System.out.println("   - needUpdate: " + device.isNeedUpdate());
                 System.out.println("   - currentTemplateId: " + device.getCurrentTemplateId());
                 
+                // 設備發送 activate 請求時，也更新最後更新時間和最後使用的刷新間隔
+                device.setUpdatedAt(LocalDateTime.now());
+                device.setLastRefreshInterval(device.getRefreshInterval());
+                deviceRepository.save(device);
+                System.out.println("   - 已更新最後更新時間: " + device.getUpdatedAt());
+                System.out.println("   - 已記錄最後使用的刷新間隔: " + device.getLastRefreshInterval() + "秒");
+                
                 // 返回類似 status API 的響應
                 resp.put("success", true);
                 resp.put("alreadyActivated", true);
@@ -262,6 +269,8 @@ public class DeviceService {
             device.setCreatedAt(now);
         }
         device.setUpdatedAt(now);
+        // 綁定時也記錄最後使用的刷新間隔
+        device.setLastRefreshInterval(device.getRefreshInterval());
 
         // 生成 Guest QR Code Token（如果還沒有）
         if (device.getGuestQRCodeToken() == null || device.getGuestQRCodeToken().isEmpty()) {
@@ -391,11 +400,14 @@ public class DeviceService {
             }
         }
 
-        // 只有設備請求時才更新 updatedAt（最後更新時間）
+        // 只有設備請求時才更新 updatedAt（最後更新時間）和 lastRefreshInterval
         if (isDeviceRequest) {
             device.setUpdatedAt(LocalDateTime.now());
+            // 記錄設備本次更新時使用的刷新間隔，用於前端判斷離線狀態
+            device.setLastRefreshInterval(device.getRefreshInterval());
             deviceRepository.save(device);
             System.out.println("   - 已更新最後更新時間: " + device.getUpdatedAt());
+            System.out.println("   - 已記錄最後使用的刷新間隔: " + device.getLastRefreshInterval() + "秒");
         }
 
         resp.put("success", true);

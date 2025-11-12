@@ -68,8 +68,10 @@ export default function DeviceManager() {
         return false;
       }
 
-      // 獲取刷新間隔（秒），默認為 300 秒
-      const refreshInterval = device.refreshInterval || 300;
+      // 獲取設備最後一次更新時使用的刷新間隔（秒）
+      // 如果沒有記錄，則使用當前的刷新間隔，默認為 300 秒
+      // 使用 lastRefreshInterval 可以避免用戶修改刷新間隔後，設備還沒收到新設置時誤判為離線
+      const refreshInterval = device.lastRefreshInterval || device.refreshInterval || 300;
       
       // 計算預期下次更新時間 = 最後更新時間 + 刷新間隔 + 1分鐘緩衝
       const expectedNextUpdate = new Date(lastUpdateTime.getTime() + (refreshInterval * 1000) + (60 * 1000));
@@ -283,10 +285,18 @@ export default function DeviceManager() {
 
       <div className="space-y-3">
         <div className="grid grid-cols-2 gap-4 text-sm">
-          <div className="flex items-center space-x-2">
-            <Clock className="w-4 h-4 text-slate-400" />
-            <span className="text-slate-600">刷新間隔:</span>
-            <span className="font-medium">{device.refreshInterval || 300}秒</span>
+          <div className="flex flex-col space-y-1">
+            <div className="flex items-center space-x-2">
+              <Clock className="w-4 h-4 text-slate-400" />
+              <span className="text-slate-600">刷新間隔:</span>
+              <span className="font-medium">{device.refreshInterval || 300}秒</span>
+            </div>
+            {device.lastRefreshInterval && (
+              <div className="flex items-center space-x-2 ml-6">
+                <span className="text-xs text-slate-500">實際使用:</span>
+                <span className="text-xs font-medium text-blue-600">{device.lastRefreshInterval}秒</span>
+              </div>
+            )}
           </div>
           <div className="flex items-center space-x-2">
             <span className="text-slate-600">強制不更新:</span>
