@@ -39,6 +39,7 @@ export default function DeviceManager() {
   const isDeviceOffline = (device) => {
     if (!device.updatedAt) {
       // 如果沒有更新時間，無法判斷，返回 false（不顯示離線）
+      console.log('設備離線檢查: 沒有 updatedAt', device.deviceId);
       return false;
     }
 
@@ -51,20 +52,33 @@ export default function DeviceManager() {
         const [year, month, day, hour = 0, minute = 0, second = 0] = device.updatedAt;
         lastUpdateTime = new Date(year, month - 1, day, hour, minute, second);
       } 
-      // 如果是字符串格式
+      // 如果是字符串格式（後端返回的格式：yyyy-MM-dd'T'HH:mm:ss，沒有時區信息）
       else if (typeof device.updatedAt === 'string') {
+        // 後端返回的是 LocalDateTime，沒有時區信息，需要當作本地時間處理
+        // 如果字符串包含 'T'，可能是 ISO 格式，直接解析
         lastUpdateTime = new Date(device.updatedAt);
+        // 如果解析失敗或時間明顯不對（可能是時區問題），嘗試手動解析
+        if (isNaN(lastUpdateTime.getTime()) || lastUpdateTime.getFullYear() < 2000) {
+          // 嘗試手動解析 yyyy-MM-dd'T'HH:mm:ss 格式
+          const match = device.updatedAt.match(/(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/);
+          if (match) {
+            const [, year, month, day, hour, minute, second] = match;
+            lastUpdateTime = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), parseInt(hour), parseInt(minute), parseInt(second));
+          }
+        }
       }
       // 如果是對象
       else if (typeof device.updatedAt === 'object') {
         lastUpdateTime = new Date(device.updatedAt);
       }
       else {
+        console.log('設備離線檢查: updatedAt 格式不支援', device.deviceId, typeof device.updatedAt);
         return false;
       }
 
       // 檢查日期是否有效
       if (isNaN(lastUpdateTime.getTime())) {
+        console.log('設備離線檢查: 日期無效', device.deviceId, device.updatedAt);
         return false;
       }
 
@@ -78,9 +92,24 @@ export default function DeviceManager() {
       
       // 如果現在時間超過預期下次更新時間，則設備可能離線
       const now = new Date();
-      return now > expectedNextUpdate;
+      const isOffline = now > expectedNextUpdate;
+      
+      // 調試信息
+      if (isOffline) {
+        console.log('設備離線檢測:', {
+          deviceId: device.deviceId,
+          deviceName: device.deviceName,
+          lastUpdateTime: lastUpdateTime.toLocaleString('zh-TW'),
+          refreshInterval: refreshInterval,
+          expectedNextUpdate: expectedNextUpdate.toLocaleString('zh-TW'),
+          now: now.toLocaleString('zh-TW'),
+          timeDiff: Math.round((now - expectedNextUpdate) / 1000) + '秒'
+        });
+      }
+      
+      return isOffline;
     } catch (error) {
-      console.error('檢查設備離線狀態時發生錯誤:', error);
+      console.error('檢查設備離線狀態時發生錯誤:', error, device);
       return false;
     }
   };
