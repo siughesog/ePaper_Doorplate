@@ -37,6 +37,7 @@ export default function Settings() {
   const [lineQRCodeUrl, setLineQRCodeUrl] = useState('');
   const [lineBotInfo, setLineBotInfo] = useState(null);
   const [isAccountExpanded, setIsAccountExpanded] = useState(false);
+  const LINE_BOT_URL = 'https://line.me/R/ti/p/@427mtqeq';
 
   useEffect(() => {
     loadSettings();
@@ -48,14 +49,19 @@ export default function Settings() {
       const result = await apiService.getLineBotInfo();
       if (result.success) {
         setLineBotInfo(result);
-        if (result.qrCodeUrl) {
-          // 使用在線 QR Code 生成服務生成 QR Code 圖片
-          const qrCodeImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(result.qrCodeUrl)}`;
-          setLineQRCodeUrl(qrCodeImageUrl);
-        }
+        // 使用硬編碼的 Line Bot URL
+        const qrCodeImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(LINE_BOT_URL)}`;
+        setLineQRCodeUrl(qrCodeImageUrl);
+      } else {
+        // 即使 API 失敗，也使用硬編碼的 URL 生成 QR Code
+        const qrCodeImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(LINE_BOT_URL)}`;
+        setLineQRCodeUrl(qrCodeImageUrl);
       }
     } catch (error) {
       console.error('載入 Line Bot 資訊失敗:', error);
+      // 即使發生錯誤，也使用硬編碼的 URL 生成 QR Code
+      const qrCodeImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(LINE_BOT_URL)}`;
+      setLineQRCodeUrl(qrCodeImageUrl);
     }
   };
 
@@ -103,9 +109,10 @@ export default function Settings() {
         // 更新 Line Bot 資訊（如果返回了）
         if (result.qrCodeUrl) {
           setLineBotInfo(result);
-          const qrCodeImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(result.qrCodeUrl)}`;
-          setLineQRCodeUrl(qrCodeImageUrl);
         }
+        // 使用硬編碼的 Line Bot URL 生成 QR Code
+        const qrCodeImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(LINE_BOT_URL)}`;
+        setLineQRCodeUrl(qrCodeImageUrl);
       } else {
         toast.error(result.message || '生成驗證碼失敗');
       }
@@ -428,13 +435,11 @@ export default function Settings() {
                     <div className="flex justify-center mb-2">
                       <img src={lineQRCodeUrl} alt="Line Bot QR Code" className="w-48 h-48 border-2 border-blue-300 rounded-lg shadow-sm" />
                     </div>
-                    {lineBotInfo?.friendUrl && (
-                      <p className="text-xs text-slate-600 text-center">
-                        或點擊連結：<a href={lineBotInfo.friendUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                          {lineBotInfo.friendUrl}
-                        </a>
-                      </p>
-                    )}
+                    <p className="text-xs text-slate-600 text-center">
+                      或點擊連結：<a href={LINE_BOT_URL} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                        {LINE_BOT_URL}
+                      </a>
+                    </p>
                   </div>
                 )}
                 
