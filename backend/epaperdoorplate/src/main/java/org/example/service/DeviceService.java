@@ -137,6 +137,11 @@ public class DeviceService {
                 resp.put("activation_code", validCode.getActivationCode());
                 // 激活碼不過期，返回null
                 resp.put("expire_at", null);
+                
+                // 為現有激活碼也生成 binData
+                String code = validCode.getActivationCode();
+                generateBinDataForActivationCode(resp, code);
+                
                 return resp;
             }
         }
@@ -160,6 +165,18 @@ public class DeviceService {
         resp.put("activation_code", code);
         resp.put("expire_at", null);
         
+        // 生成 binData
+        generateBinDataForActivationCode(resp, code);
+        
+        return resp;
+    }
+
+    /**
+     * 為激活碼生成 binData 並添加到響應中
+     * @param resp 響應 Map
+     * @param code 激活碼
+     */
+    private void generateBinDataForActivationCode(Map<String, Object> resp, String code) {
         // 嘗試找到並渲染激活碼顯示佈局
         try {
             System.out.println("🔄 開始查找激活碼顯示佈局");
@@ -216,8 +233,6 @@ public class DeviceService {
             e.printStackTrace();
             // 不影響激活碼的返回，只是沒有 binData
         }
-        
-        return resp;
     }
 
     public Map<String, Object> bind(String activationCode, String deviceName, String username) {
