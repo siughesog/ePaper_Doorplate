@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   Smartphone, 
   Plus, 
@@ -38,6 +38,9 @@ export default function DeviceManager() {
   const [statusMessage, setStatusMessage] = useState('');
   const pollingIntervalRef = useRef(null);
   const previousTransferringStateRef = useRef(new Map()); // 跟踪每个设备之前的传输状态
+  const expectedRefreshTimersRef = useRef(new Map()); // 跟踪每个设备的预期刷新定时器
+  const pollingStartTimeRef = useRef(null); // 记录轮询开始时间
+  const [autoRefreshEnabled, setAutoRefreshEnabled] = useState(true); // 自动刷新开关
 
   // 檢查設備是否離線
   const isDeviceOffline = (device) => {
@@ -159,9 +162,162 @@ export default function DeviceManager() {
     }
   };
 
+  // 計算設備的預期下次刷新時間
+  const calculateExpectedNextRefresh = (device) => {
+    if (!device.updatedAt || !device.lastRefreshInterval) {
+      return null;
+    }
+
+    try {
+      let lastUpdateTime;
+      
+      // 解析 updatedAt
+      if (Array.isArray(device.updatedAt)) {
+        const [year, month, day, hour = 0, minute = 0, second = 0] = device.updatedAt;
+        lastUpdateTime = new Date(year, month - 1, day, hour, minute, second);
+      } else if (typeof device.updatedAt === 'string') {
+        const match = device.updatedAt.match(/(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/);
+        if (match) {
+          const [, year, month, day, hour, minute, second] = match;
+          lastUpdateTime = new Date(Date.UTC(
+            parseInt(year), 
+            parseInt(month) - 1, 
+            parseInt(day), 
+            parseInt(hour), 
+            parseInt(minute), 
+            parseInt(second)
+          ));
+        } else {
+          lastUpdateTime = new Date(device.updatedAt);
+        }
+      } else {
+        lastUpdateTime = new Date(device.updatedAt);
+      }
+
+      if (isNaN(lastUpdateTime.getTime())) {
+        return null;
+      }
+
+      // 預期下次刷新時間 = 最後更新時間 + 刷新間隔（秒）
+      const expectedTime = new Date(lastUpdateTime.getTime() + (device.lastRefreshInterval * 1000));
+      return expectedTime;
+    } catch (error) {
+      console.error('計算預期刷新時間失敗:', error);
+      return null;
+    }
+  };
+
   // 首次載入
   useEffect(() => {
     loadDevices(true);
+  }, []);
+
+  // 設置預期刷新定時器（只在自動刷新啟用時）
+  useEffect(() => {
+    if (!autoRefreshEnabled) {
+      // 清除所有定時器
+      expectedRefreshTimersRef.current.forEach(timer => clearTimeout(timer));
+      expectedRefreshTimersRef.current.clear();
+      return;
+    }
+
+    // 為每個設備設置預期刷新定時器
+    devices.forEach(device => {
+      const deviceId = device.deviceId;
+      const expectedTime = calculateExpectedNextRefresh(device);
+      
+      if (!expectedTime) {
+        return;
+      }
+
+      const now = new Date();
+      const timeUntilExpected = expectedTime.getTime() - now.getTime();
+
+      // 如果已經過了預期時間，立即開始輪詢
+      if (timeUntilExpected <= 0) {
+        // 清除舊的定時器
+        if (expectedRefreshTimersRef.current.has(deviceId)) {
+          clearTimeout(expectedRefreshTimersRef.current.get(deviceId));
+        }
+        
+        // 立即開始輪詢
+        if (!pollingIntervalRef.current) {
+          startPolling();
+        }
+        return;
+      }
+
+      // 如果還沒到預期時間，設置定時器
+      // 清除舊的定時器
+      if (expectedRefreshTimersRef.current.has(deviceId)) {
+        clearTimeout(expectedRefreshTimersRef.current.get(deviceId));
+      }
+
+      const timer = setTimeout(() => {
+        console.log(`⏰ 設備 ${deviceId} 到達預期刷新時間，開始輪詢`);
+        if (!pollingIntervalRef.current) {
+          startPolling();
+        }
+        expectedRefreshTimersRef.current.delete(deviceId);
+      }, timeUntilExpected);
+
+      expectedRefreshTimersRef.current.set(deviceId, timer);
+    });
+
+    // 清理函數
+    return () => {
+      expectedRefreshTimersRef.current.forEach(timer => clearTimeout(timer));
+      expectedRefreshTimersRef.current.clear();
+    };
+  }, [devices, autoRefreshEnabled]);
+
+  // 開始輪詢
+  const startPolling = useCallback(() => {
+    if (pollingIntervalRef.current) {
+      return; // 已經在輪詢中
+    }
+
+    pollingStartTimeRef.current = Date.now();
+    loadDevices(false);
+    pollingIntervalRef.current = setInterval(() => {
+      loadDevices(false);
+      
+      // 如果30秒內沒有檢測到傳輸，停止輪詢
+      if (pollingStartTimeRef.current) {
+        const elapsed = Date.now() - pollingStartTimeRef.current;
+        if (elapsed > 30000) {
+          // 使用 setTimeout 來檢查，避免在 loadDevices 的回調中檢查
+          setTimeout(() => {
+            if (pollingStartTimeRef.current) {
+              // 重新獲取最新的設備列表來檢查
+              const username = localStorage.getItem('username');
+              if (username) {
+                apiService.getUserDevices(username).then(result => {
+                  if (result.success) {
+                    const hasTransferring = result.devices?.some(device => device.isTransferring) || false;
+                    if (!hasTransferring) {
+                      console.log('⏱️ 30秒內沒有檢測到傳輸，停止輪詢');
+                      stopPolling();
+                    }
+                  }
+                });
+              }
+            }
+          }, 100);
+        }
+      }
+    }, 2000);
+    console.log('🔄 開始每2秒自動刷新');
+  }, []);
+
+  // 停止輪詢
+  const stopPolling = useCallback(() => {
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
+      pollingStartTimeRef.current = null;
+      console.log('✅ 停止自動刷新');
+    }
   }, []);
 
   // 動態輪詢機制：只在設備實際傳輸時才頻繁刷新
@@ -176,8 +332,12 @@ export default function DeviceManager() {
       const isTransferring = device.isTransferring || false;
       
       if (!wasTransferring && isTransferring) {
-        // 傳輸剛開始
+        // 傳輸剛開始，重置輪詢開始時間
+        pollingStartTimeRef.current = Date.now();
         console.log('🔄 設備開始傳輸:', deviceId);
+        if (!pollingIntervalRef.current) {
+          startPolling();
+        }
       } else if (wasTransferring && !isTransferring) {
         // 傳輸剛完成
         console.log('✅ 設備傳輸完成:', deviceId);
@@ -188,32 +348,20 @@ export default function DeviceManager() {
     });
     
     if (hasTransferringDevice) {
-      // 有設備正在傳輸，啟動或繼續快速輪詢（每2秒）
+      // 有設備正在傳輸，確保輪詢正在運行
       if (!pollingIntervalRef.current) {
-        // 立即刷新一次，然後開始快速輪詢
-        loadDevices(false);
-        pollingIntervalRef.current = setInterval(() => {
-          loadDevices(false);
-        }, 2000); // 每2秒刷新一次，以便及時檢測狀態變化
-        console.log('🔄 檢測到設備正在傳輸，立即刷新並開始每2秒自動刷新');
+        startPolling();
       }
     } else {
       // 沒有設備在傳輸，停止輪詢
-      if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current);
-        pollingIntervalRef.current = null;
-        console.log('✅ 所有設備傳輸完成，停止自動刷新');
-      }
+      stopPolling();
     }
     
     // 清理函數
     return () => {
-      if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current);
-        pollingIntervalRef.current = null;
-      }
+      stopPolling();
     };
-  }, [devices]);
+  }, [devices, startPolling, stopPolling]);
 
   // 綁定裝置
   const handleBindDevice = async () => {
@@ -503,6 +651,18 @@ export default function DeviceManager() {
             </div>
             
             <div className="flex items-center space-x-3">
+              <div className="flex items-center space-x-2 px-3 py-2 border border-slate-300 rounded-lg">
+                <input
+                  type="checkbox"
+                  id="autoRefresh"
+                  checked={autoRefreshEnabled}
+                  onChange={(e) => setAutoRefreshEnabled(e.target.checked)}
+                  className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
+                />
+                <label htmlFor="autoRefresh" className="text-sm text-slate-700 cursor-pointer">
+                  自動刷新
+                </label>
+              </div>
               <button
                 onClick={() => loadDevices(false)}
                 className="flex items-center space-x-2 px-4 py-2 text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
