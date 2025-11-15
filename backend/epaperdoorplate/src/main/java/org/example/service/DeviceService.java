@@ -44,8 +44,39 @@ public class DeviceService {
 
     private static final SecureRandom RANDOM = new SecureRandom();
     
-    // 跟踪正在传输数据的设备（deviceId -> 开始传输的时间戳）
-    private final Map<String, Long> transferringDevices = new ConcurrentHashMap<>();
+    // 传输状态枚举
+    public enum TransferStatus {
+        IN_PROGRESS,  // 正在传输
+        SUCCESS,      // 渲染成功
+        FAILED        // 渲染失败
+    }
+    
+    // 传输状态信息类
+    public static class TransferStatusInfo {
+        private TransferStatus status;
+        private long startTime;
+        private String errorMessage; // 失败时的错误信息
+        
+        public TransferStatusInfo(TransferStatus status, long startTime) {
+            this.status = status;
+            this.startTime = startTime;
+        }
+        
+        public TransferStatusInfo(TransferStatus status, long startTime, String errorMessage) {
+            this.status = status;
+            this.startTime = startTime;
+            this.errorMessage = errorMessage;
+        }
+        
+        public TransferStatus getStatus() { return status; }
+        public long getStartTime() { return startTime; }
+        public String getErrorMessage() { return errorMessage; }
+        public void setStatus(TransferStatus status) { this.status = status; }
+        public void setErrorMessage(String errorMessage) { this.errorMessage = errorMessage; }
+    }
+    
+    // 跟踪设备传输状态（deviceId -> 传输状态信息）
+    private final Map<String, TransferStatusInfo> transferringDevices = new ConcurrentHashMap<>();
 
     public Map<String, Object> activate(String uniqueId) {
         System.out.println("\n========== 設備激活API ==========");
@@ -422,20 +453,8 @@ public class DeviceService {
             System.out.println("   - 已更新最後更新時間: " + device.getUpdatedAt());
             System.out.println("   - 已記錄最後使用的刷新間隔: " + device.getLastRefreshInterval() + "秒");
             
-            // 如果設備之前正在傳輸，且現在 needUpdate 為 false，說明傳輸已完成，清除傳輸狀態
-            // 這是設備再次請求（不是第一次請求數據時），說明設備已經處理完上次的數據
-            if (transferringDevices.containsKey(deviceId) && !device.isNeedUpdate()) {
-                // 檢查傳輸開始時間，如果是剛標記的（3秒內），可能是第一次請求，不立即清除
-                // 如果超過3秒，說明設備已經有時間接收數據，且 needUpdate=false，立即清除
-                long transferStartTime = transferringDevices.get(deviceId);
-                long elapsed = System.currentTimeMillis() - transferStartTime;
-                if (elapsed > 3000) { // 至少3秒後才清除（給設備足夠時間開始接收數據）
-                    clearTransferringStatus(deviceId);
-                    System.out.println("✅ 設備傳輸已完成（needUpdate=false 且已超過3秒），清除傳輸狀態: " + deviceId);
-                } else {
-                    System.out.println("⏳ 設備剛開始傳輸（" + elapsed + "ms），暫不清除傳輸狀態: " + deviceId);
-                }
-            }
+            // 注意：現在不再在這裡清除傳輸狀態，因為 ESP32 會主動發送 render-complete 消息
+            // 只有在超時時才自動清除
         }
 
         resp.put("success", true);
@@ -522,7 +541,7 @@ public class DeviceService {
                 if (binData != null && binData.length > 0) {
                     // 標記設備正在傳輸（僅在設備請求時標記，前端查詢不標記）
                     if (isDeviceRequest) {
-                        transferringDevices.put(deviceId, System.currentTimeMillis());
+                        transferringDevices.put(deviceId, new TransferStatusInfo(TransferStatus.IN_PROGRESS, System.currentTimeMillis()));
                         System.out.println("📤 標記設備為正在傳輸: " + deviceId);
                     }
                     
@@ -656,22 +675,74 @@ public class DeviceService {
             return false;
         }
         
+        TransferStatusInfo statusInfo = transferringDevices.get(deviceId);
+        
+        // 如果狀態是 SUCCESS 或 FAILED，表示已完成，不再傳輸
+        if (statusInfo.getStatus() == TransferStatus.SUCCESS || statusInfo.getStatus() == TransferStatus.FAILED) {
+            return false;
+        }
+        
         // 檢查傳輸是否超時（超過5分鐘認為已超時，自動清除）
-        long startTime = transferringDevices.get(deviceId);
-        long elapsed = System.currentTimeMillis() - startTime;
+        long elapsed = System.currentTimeMillis() - statusInfo.getStartTime();
         if (elapsed > 5 * 60 * 1000) { // 5分鐘超時
             transferringDevices.remove(deviceId);
             System.out.println("⏱️ 設備傳輸超時，自動清除: " + deviceId);
             return false;
         }
         
-        return true;
+        return statusInfo.getStatus() == TransferStatus.IN_PROGRESS;
+    }
+    
+    // 獲取設備傳輸狀態（用於前端顯示）
+    public TransferStatus getDeviceTransferStatus(String deviceId) {
+        if (!transferringDevices.containsKey(deviceId)) {
+            return null;
+        }
+        return transferringDevices.get(deviceId).getStatus();
+    }
+    
+    // 獲取設備傳輸錯誤信息
+    public String getDeviceTransferErrorMessage(String deviceId) {
+        if (!transferringDevices.containsKey(deviceId)) {
+            return null;
+        }
+        return transferringDevices.get(deviceId).getErrorMessage();
     }
     
     // 清除設備的傳輸狀態（當傳輸完成時調用）
     public void clearTransferringStatus(String deviceId) {
         transferringDevices.remove(deviceId);
         System.out.println("✅ 清除設備傳輸狀態: " + deviceId);
+    }
+    
+    // 處理設備渲染完成消息
+    public Map<String, Object> handleRenderComplete(String deviceId, String status, String errorMessage) {
+        Map<String, Object> resp = new HashMap<>();
+        
+        if (!transferringDevices.containsKey(deviceId)) {
+            resp.put("success", false);
+            resp.put("message", "device not in transferring state");
+            return resp;
+        }
+        
+        TransferStatusInfo statusInfo = transferringDevices.get(deviceId);
+        
+        if ("success".equalsIgnoreCase(status)) {
+            statusInfo.setStatus(TransferStatus.SUCCESS);
+            System.out.println("✅ 設備渲染成功: " + deviceId);
+        } else if ("failed".equalsIgnoreCase(status)) {
+            statusInfo.setStatus(TransferStatus.FAILED);
+            statusInfo.setErrorMessage(errorMessage);
+            System.out.println("❌ 設備渲染失敗: " + deviceId + (errorMessage != null ? ", 錯誤: " + errorMessage : ""));
+        } else {
+            resp.put("success", false);
+            resp.put("message", "invalid status: " + status);
+            return resp;
+        }
+        
+        resp.put("success", true);
+        resp.put("message", "render status updated");
+        return resp;
     }
 
     public Map<String, Object> getUserDevices(String username) {
@@ -706,18 +777,8 @@ public class DeviceService {
             // 檢查傳輸狀態
             boolean isTransferring = isDeviceTransferring(device.getDeviceId());
             
-            // 如果設備不需要更新（needUpdate=false），且傳輸狀態存在超過5秒，說明傳輸已完成，清除狀態
-            // 這樣可以避免設備完成傳輸後，但還沒再次請求時，前端一直顯示"正在傳輸"
-            boolean responseNeedUpdate = device.isForceNoUpdate() ? false : device.isNeedUpdate();
-            if (!responseNeedUpdate && isTransferring) {
-                long transferStartTime = transferringDevices.get(device.getDeviceId());
-                long elapsed = System.currentTimeMillis() - transferStartTime;
-                if (elapsed > 5000) { // 5秒後，如果 needUpdate=false，認為傳輸已完成
-                    clearTransferringStatus(device.getDeviceId());
-                    isTransferring = false;
-                    System.out.println("✅ 前端查詢：設備傳輸已完成（needUpdate=false 且已超過5秒），清除傳輸狀態: " + device.getDeviceId());
-                }
-            }
+            // 注意：現在不再在這裡清除傳輸狀態，因為 ESP32 會主動發送 render-complete 消息
+            // 只有在超時時才自動清除（在 isDeviceTransferring 中處理）
             
             deviceMap.put("isTransferring", isTransferring);
             devicesWithStatus.add(deviceMap);

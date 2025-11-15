@@ -63,7 +63,7 @@ String wifi_ssid = "";
 String wifi_password = "";
 
 // globals
-unsigned long startTime = millis();
+unsigned long deviceStartTime = 0; // 設備啟動時間（在setup中設置）
 const unsigned long button_timeout = 5000;
 
 struct DeviceConfig {
@@ -118,6 +118,10 @@ void setup() {
   loadWiFiCredentials();
   loadSavedConfig();
 
+  // 記錄設備啟動時間（用於計算實際休眠時間）
+  deviceStartTime = millis();
+  Serial.println("⏱️ 設備啟動時間已記錄: " + String(deviceStartTime) + " ms");
+  
   esp_sleep_wakeup_cause_t wakeup_reason = esp_sleep_get_wakeup_cause();
   if (wakeup_reason == ESP_SLEEP_WAKEUP_EXT0) Serial.println("🌞 從按鈕喚醒");
   else if (wakeup_reason == ESP_SLEEP_WAKEUP_TIMER) Serial.println("⏰ 從定時器喚醒");
@@ -1604,8 +1608,13 @@ void callDeviceStatusAPI(String deviceID) {
     
     if (decodedLen > 0) {
       Serial.println("✅ 流式解碼完成，總大小: " + String(decodedLen) + " bytes");
-        } else {
+      
+      // 發送渲染完成消息給服務器（在display.refresh()和powerOff()完成後）
+      sendRenderCompleteMessage(deviceID, "success", "");
+    } else {
       Serial.println("❌ 流式解碼失敗");
+      // 發送渲染失敗消息
+      sendRenderCompleteMessage(deviceID, "failed", "Stream decode failed");
     }
     
     // 更新配置
@@ -1615,7 +1624,7 @@ void callDeviceStatusAPI(String deviceID) {
     savedConfig.hasBinData = true;
     savedConfig.binSize = binSize;
     saveConfig(savedConfig);
-      return;
+    return;
         } else {
     // 沒有 binData，讀取並丟棄剩餘響應
     while (stream->available() > 0 || http.connected()) {
@@ -1892,18 +1901,81 @@ void displayDefaultImage() {
   Serial.println("========== 默認圖像顯示完成 ==========\n");
 }
 
-// goToDeepSleep（同你原本）
+// 發送渲染完成消息給服務器
+void sendRenderCompleteMessage(String deviceID, String status, String errorMessage) {
+  if (deviceID.length() == 0) {
+    Serial.println("⚠️ 無 deviceID，跳過發送渲染完成消息");
+    return;
+  }
+  
+  Serial.println("\n========== 發送渲染完成消息 ==========");
+  Serial.println("📤 發送請求: POST /device/render-complete");
+  Serial.println("🆔 deviceID: " + deviceID);
+  Serial.println("📊 status: " + status);
+  if (errorMessage.length() > 0) {
+    Serial.println("❌ errorMessage: " + errorMessage);
+  }
+  
+  WiFiClientSecure client;
+  client.setInsecure();
+  
+  HTTPClient http;
+  String url = String(api_base_url) + "/device/render-complete";
+  http.begin(client, url);
+  http.addHeader("Content-Type", "application/x-www-form-urlencoded");
+  http.addHeader("Accept", "application/json");
+  http.setTimeout(10000);
+  
+  String postData = "deviceID=" + deviceID + "&status=" + status;
+  if (errorMessage.length() > 0) {
+    postData += "&errorMessage=" + errorMessage;
+  }
+  
+  int httpCode = http.POST(postData);
+  Serial.println("📥 HTTP 響應碼: " + String(httpCode));
+  
+  if (httpCode == HTTP_CODE_OK) {
+    String response = http.getString();
+    Serial.println("✅ 渲染完成消息發送成功");
+    Serial.println("📥 響應: " + response);
+  } else {
+    Serial.println("❌ 渲染完成消息發送失敗: " + String(httpCode));
+  }
+  
+  http.end();
+}
+
+// goToDeepSleep：計算實際休眠時間（refreshInterval - 已運行時間）
 void goToDeepSleep(int sleepSeconds, bool isActivated) {
   Serial.println("\n========== 準備進入深度睡眠 ==========");
   esp_sleep_enable_ext0_wakeup((gpio_num_t)BUTTON_PIN_1, 0);
   Serial.println("🔘 已配置按鈕1喚醒");
+  
   if (isActivated) {
     if (sleepSeconds <= 0) sleepSeconds = 300;
-    Serial.println("⏰ 睡眠時間: " + String(sleepSeconds) + " 秒");
-    esp_sleep_enable_timer_wakeup((uint64_t)sleepSeconds * 1000000ULL);
+    
+    // 計算已運行時間（從設備啟動到現在）
+    unsigned long elapsedTime = millis() - deviceStartTime;
+    unsigned long elapsedSeconds = elapsedTime / 1000;
+    
+    // 計算實際休眠時間 = refreshInterval - 已運行時間
+    int actualSleepSeconds = sleepSeconds - elapsedSeconds;
+    
+    // 確保實際休眠時間 >= 0（如果已運行時間超過 refreshInterval，設置為最小1秒）
+    if (actualSleepSeconds < 1) {
+      actualSleepSeconds = 1;
+    }
+    
+    Serial.println("⏱️ 設備已運行時間: " + String(elapsedSeconds) + " 秒");
+    Serial.println("⏰ 原始刷新間隔: " + String(sleepSeconds) + " 秒");
+    Serial.println("⏰ 實際休眠時間: " + String(actualSleepSeconds) + " 秒");
+    Serial.println("✅ 總時間（運行 + 休眠）: " + String(elapsedSeconds + actualSleepSeconds) + " 秒");
+    
+    esp_sleep_enable_timer_wakeup((uint64_t)actualSleepSeconds * 1000000ULL);
   } else {
     Serial.println("⚠️ 設備未激活，僅配置按鈕喚醒");
   }
+  
   Serial.println("😴 進入深度睡眠...");
   delay(1000);
   esp_deep_sleep_start();

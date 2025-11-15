@@ -10,7 +10,9 @@ import {
   WifiOff,
   Clock,
   User,
-  Upload
+  Upload,
+  CheckCircle,
+  XCircle
 } from 'lucide-react';
 import apiService from './services/api';
 
@@ -218,14 +220,19 @@ export default function DeviceManager() {
 
   // 動態輪詢機制：檢測傳輸狀態變化
   useEffect(() => {
-    // 檢查是否有設備正在傳輸
+    // 檢查是否有設備正在傳輸或已完成（SUCCESS/FAILED）
     const hasTransferringDevice = devices.some(device => device.isTransferring);
+    const hasCompletedDevice = devices.some(device => {
+      const status = device.transferStatus;
+      return status === 'SUCCESS' || status === 'FAILED';
+    });
     
     // 檢測傳輸狀態變化
     devices.forEach(device => {
       const deviceId = device.deviceId;
       const wasTransferring = previousTransferringStateRef.current.get(deviceId) || false;
       const isTransferring = device.isTransferring || false;
+      const transferStatus = device.transferStatus;
       
       if (!wasTransferring && isTransferring) {
         // 傳輸剛開始，重置輪詢開始時間（延長輪詢時間）
@@ -235,8 +242,15 @@ export default function DeviceManager() {
         if (!pollingIntervalRef.current) {
           startPolling();
         }
-      } else if (wasTransferring && !isTransferring) {
-        // 傳輸剛完成，自動停止輪詢
+      } else if (transferStatus === 'SUCCESS' || transferStatus === 'FAILED') {
+        // 渲染完成（成功或失敗），自動停止輪詢
+        console.log(`✅ 設備渲染完成: ${deviceId}, 狀態: ${transferStatus}`);
+        if (pollingIntervalRef.current) {
+          console.log('🛑 渲染完成，自動停止輪詢');
+          stopPolling();
+        }
+      } else if (wasTransferring && !isTransferring && !transferStatus) {
+        // 傳輸剛完成但沒有狀態（舊邏輯，保留兼容性）
         console.log('✅ 設備傳輸完成:', deviceId);
         if (pollingIntervalRef.current) {
           console.log('🛑 傳輸完成，自動停止輪詢');
@@ -253,8 +267,14 @@ export default function DeviceManager() {
       startPolling();
     }
     
+    // 如果有設備已完成（SUCCESS/FAILED），停止輪詢
+    if (hasCompletedDevice && pollingIntervalRef.current) {
+      console.log('🛑 檢測到設備已完成渲染，停止輪詢');
+      stopPolling();
+    }
+    
     // 如果沒有設備在傳輸，且輪詢超過10秒，停止輪詢
-    if (!hasTransferringDevice && pollingIntervalRef.current && pollingStartTimeRef.current) {
+    if (!hasTransferringDevice && !hasCompletedDevice && pollingIntervalRef.current && pollingStartTimeRef.current) {
       const elapsed = Date.now() - pollingStartTimeRef.current;
       if (elapsed > 10000) {
         console.log('⏱️ 沒有設備在傳輸且已超過10秒，停止輪詢');
@@ -384,15 +404,39 @@ export default function DeviceManager() {
   const DeviceCard = ({ device }) => {
     const offline = isDeviceOffline(device);
     const isTransferring = device.isTransferring || false;
+    const transferStatus = device.transferStatus; // SUCCESS, FAILED, IN_PROGRESS, 或 undefined
     
     return (
-    <div className={`bg-white rounded-xl shadow-lg border p-6 hover:shadow-xl transition-all duration-300 ${offline ? 'border-red-300 bg-red-50' : isTransferring ? 'border-blue-300 bg-blue-50' : 'border-slate-200'}`}>
+    <div className={`bg-white rounded-xl shadow-lg border p-6 hover:shadow-xl transition-all duration-300 ${offline ? 'border-red-300 bg-red-50' : isTransferring ? 'border-blue-300 bg-blue-50' : transferStatus === 'SUCCESS' ? 'border-green-300 bg-green-50' : transferStatus === 'FAILED' ? 'border-red-300 bg-red-50' : 'border-slate-200'}`}>
       {/* 正在傳輸提示 */}
-      {isTransferring && (
+      {isTransferring && transferStatus !== 'SUCCESS' && transferStatus !== 'FAILED' && (
         <div className="mb-4 p-3 bg-blue-100 border border-blue-300 rounded-lg flex items-center space-x-2">
           <Upload className="w-5 h-5 text-blue-600 animate-pulse" />
           <div className="flex-1">
             <p className="text-sm font-medium text-blue-800">正在傳送資料給設備...</p>
+          </div>
+        </div>
+      )}
+      
+      {/* 渲染成功提示 */}
+      {transferStatus === 'SUCCESS' && (
+        <div className="mb-4 p-3 bg-green-100 border border-green-300 rounded-lg flex items-center space-x-2">
+          <CheckCircle className="w-5 h-5 text-green-600" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-green-800">✅ 更新成功</p>
+          </div>
+        </div>
+      )}
+      
+      {/* 渲染失敗提示 */}
+      {transferStatus === 'FAILED' && (
+        <div className="mb-4 p-3 bg-red-100 border border-red-300 rounded-lg flex items-center space-x-2">
+          <XCircle className="w-5 h-5 text-red-600" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-red-800">❌ 更新失敗</p>
+            {device.transferErrorMessage && (
+              <p className="text-xs text-red-600 mt-1">錯誤: {device.transferErrorMessage}</p>
+            )}
           </div>
         </div>
       )}

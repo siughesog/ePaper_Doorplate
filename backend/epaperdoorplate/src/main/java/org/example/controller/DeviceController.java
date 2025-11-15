@@ -55,6 +55,13 @@ public class DeviceController {
                                                                     @RequestParam("templateId") String templateId) {
         return ResponseEntity.ok(deviceService.updateDeviceTemplate(deviceId, templateId));
     }
+
+    @PostMapping("/render-complete")
+    public ResponseEntity<Map<String, Object>> renderComplete(@RequestParam("deviceID") String deviceId,
+                                                               @RequestParam("status") String status,
+                                                               @RequestParam(value = "errorMessage", required = false) String errorMessage) {
+        return ResponseEntity.ok(deviceService.handleRenderComplete(deviceId, status, errorMessage));
+    }
 }
 
 
