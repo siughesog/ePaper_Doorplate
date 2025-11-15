@@ -440,7 +440,7 @@ export default function DeviceManager() {
         </div>
       )}
       
-      {/* 渲染成功提示 */}
+      {/* 狀態提示（成功、失敗、離線 - 互斥顯示） */}
       {transferStatus === 'SUCCESS' && (
         <div className="mb-4 p-3 bg-green-100 border border-green-300 rounded-lg flex items-center space-x-2">
           <CheckCircle className="w-5 h-5 text-green-600" />
@@ -450,7 +450,6 @@ export default function DeviceManager() {
         </div>
       )}
       
-      {/* 渲染失敗提示 */}
       {transferStatus === 'FAILED' && (
         <div className="mb-4 p-3 bg-red-100 border border-red-300 rounded-lg flex items-center space-x-2">
           <XCircle className="w-5 h-5 text-red-600" />
@@ -463,8 +462,8 @@ export default function DeviceManager() {
         </div>
       )}
       
-      {/* 離線警告提示 */}
-      {offline && !isTransferring && (
+      {/* 離線警告提示（只在沒有成功/失敗狀態時顯示） */}
+      {offline && !isTransferring && transferStatus !== 'SUCCESS' && transferStatus !== 'FAILED' && (
         <div className="mb-4 p-3 bg-red-100 border border-red-300 rounded-lg flex items-center space-x-2">
           <WifiOff className="w-5 h-5 text-red-600" />
           <div className="flex-1">
@@ -480,7 +479,6 @@ export default function DeviceManager() {
           </div>
           <div>
             <h3 className="font-semibold text-slate-800">{device.deviceName || '未命名裝置'}</h3>
-            <p className="text-sm text-slate-500">ID: {device.deviceId}</p>
           </div>
         </div>
         <div className="flex space-x-2">
