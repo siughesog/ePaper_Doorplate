@@ -234,8 +234,12 @@ export default function DeviceManager() {
           startPolling();
         }
       } else if (wasTransferring && !isTransferring) {
-        // 傳輸剛完成
+        // 傳輸剛完成，自動停止輪詢
         console.log('✅ 設備傳輸完成:', deviceId);
+        if (pollingIntervalRef.current) {
+          console.log('🛑 傳輸完成，自動停止輪詢');
+          stopPolling();
+        }
       }
       
       // 更新狀態
