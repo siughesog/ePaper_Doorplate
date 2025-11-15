@@ -64,7 +64,9 @@ String wifi_password = "";
 
 // globals
 unsigned long deviceStartTime = 0; // 設備啟動時間（在setup中設置）
+unsigned long apModeStartTime = 0; // AP模式開始時間
 const unsigned long button_timeout = 5000;
+const unsigned long ap_mode_timeout = 5 * 60 * 1000; // AP模式5分鐘超時（毫秒）
 
 struct DeviceConfig {
   bool success;
@@ -197,6 +199,18 @@ void setup() {
 void loop() {
   if (isAPMode) {
     server.handleClient();
+    
+    // 檢查AP模式是否超過5分鐘
+    if (apModeStartTime > 0) {
+      unsigned long elapsed = millis() - apModeStartTime;
+      if (elapsed > ap_mode_timeout) {
+        Serial.println("\n========== AP模式超時（5分鐘），進入深度睡眠 ==========");
+        Serial.println("⏱️ AP模式運行時間: " + String(elapsed / 1000) + " 秒");
+        delay(1000);
+        goToDeepSleep(300, false); // 進入深度睡眠，僅配置按鈕喚醒
+      }
+    }
+    
     delay(10);
   }
 }
@@ -254,9 +268,11 @@ void saveConfig(DeviceConfig config) {
 
 void startAPMode() {
   isAPMode = true;
+  apModeStartTime = millis(); // 記錄AP模式開始時間
   Serial.println("\n========== 啟動 AP 模式 ==========");
   Serial.println("📡 SSID: " + String(ap_ssid));
   Serial.println("🔑 密碼: " + String(ap_password));
+  Serial.println("⏱️ 5分鐘後將自動進入深度睡眠");
 
   WiFi.mode(WIFI_AP);
   WiFi.softAP(ap_ssid, ap_password);
@@ -272,11 +288,8 @@ void startAPMode() {
 
   server.begin();
   Serial.println("✅ Web 服務器已啟動");
-
-  while (true) {
-    server.handleClient();
-    delay(10);
-  }
+  
+  // 注意：不再使用 while(true)，改為在 loop() 中處理，以便檢查超時
 }
 
 void handleRoot() {
