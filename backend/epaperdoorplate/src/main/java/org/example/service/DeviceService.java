@@ -19,6 +19,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class DeviceService {
@@ -372,6 +373,7 @@ public class DeviceService {
         return status(deviceId, true); // 默認是設備請求，會改變狀態
     }
 
+    @Transactional
     public Map<String, Object> status(String deviceId, boolean isDeviceRequest) {
         System.out.println("\n========== 設備狀態查詢 ==========");
         System.out.println("設備ID: " + deviceId);
