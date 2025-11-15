@@ -41,6 +41,7 @@ export default function DeviceManager() {
   const pollingIntervalRef = useRef(null);
   const previousTransferringStateRef = useRef(new Map()); // 跟踪每个设备之前的传输状态
   const pollingStartTimeRef = useRef(null); // 记录轮询开始时间
+  const [isPolling, setIsPolling] = useState(false); // 用于触发重新渲染
 
   // 檢查設備是否離線
   const isDeviceOffline = (device) => {
@@ -179,6 +180,7 @@ export default function DeviceManager() {
     pollingStartTimeRef.current = startTime;
     loadDevices(false);
     
+    setIsPolling(true); // 更新狀態以觸發重新渲染
     pollingIntervalRef.current = setInterval(() => {
       const elapsed = Date.now() - startTime;
       
@@ -189,6 +191,7 @@ export default function DeviceManager() {
           clearInterval(pollingIntervalRef.current);
           pollingIntervalRef.current = null;
           pollingStartTimeRef.current = null;
+          setIsPolling(false); // 更新狀態以觸發重新渲染
           console.log('✅ 已停止輪詢');
           // 最後一次查詢設備狀態並更新UI
           loadDevices(false).then(() => {
@@ -211,6 +214,7 @@ export default function DeviceManager() {
       clearInterval(pollingIntervalRef.current);
       pollingIntervalRef.current = null;
       pollingStartTimeRef.current = null;
+      setIsPolling(false); // 更新狀態以觸發重新渲染
       console.log('✅ 停止自動刷新');
       // 停止輪詢前，再查詢一次設備狀態以確保UI更新
       loadDevices(false).then(() => {
@@ -619,10 +623,10 @@ export default function DeviceManager() {
                   startPolling(); // 手動刷新時開始輪詢
                 }}
                 className="flex items-center space-x-2 px-4 py-2 text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={isLoading || pollingIntervalRef.current !== null}
+                disabled={isLoading || isPolling}
               >
-                <RefreshCw className={`w-4 h-4 ${isLoading || pollingIntervalRef.current !== null ? 'animate-spin' : ''}`} />
-                <span>{pollingIntervalRef.current !== null ? '正在刷新...' : '重新載入'}</span>
+                <RefreshCw className={`w-4 h-4 ${isLoading || isPolling ? 'animate-spin' : ''}`} />
+                <span>{isPolling ? '正在刷新...' : '重新載入'}</span>
               </button>
               <button
                 onClick={() => setShowBindModal(true)}
