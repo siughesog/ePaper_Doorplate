@@ -17,6 +17,7 @@ import apiService from './services/api';
 export default function DeviceManager() {
   const [devices, setDevices] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [showBindModal, setShowBindModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingDevice, setEditingDevice] = useState(null);
@@ -123,8 +124,13 @@ export default function DeviceManager() {
   };
 
   // 載入裝置列表
-  const loadDevices = async () => {
-    setIsLoading(true);
+  const loadDevices = async (isInitial = false) => {
+    // 只在首次載入時顯示加載狀態，刷新時不顯示（避免內容消失再出現）
+    if (isInitial) {
+      setIsInitialLoading(true);
+    } else {
+      setIsLoading(true);
+    }
     try {
       const username = localStorage.getItem('username');
       if (!username) {
@@ -144,25 +150,49 @@ export default function DeviceManager() {
       setStatusMessage('載入裝置列表失敗');
       setDevices([]);
     } finally {
-      setIsLoading(false);
+      if (isInitial) {
+        setIsInitialLoading(false);
+      } else {
+        setIsLoading(false);
+      }
     }
   };
 
+  // 首次載入
   useEffect(() => {
-    loadDevices();
+    loadDevices(true);
+  }, []);
+
+  // 動態輪詢機制：只在有設備正在傳輸時才頻繁刷新
+  useEffect(() => {
+    // 檢查是否有設備正在傳輸
+    const hasTransferringDevice = devices.some(device => device.isTransferring);
     
-    // 設置輪詢機制，每5秒檢查一次傳輸狀態
-    pollingIntervalRef.current = setInterval(() => {
-      loadDevices();
-    }, 5000);
+    if (hasTransferringDevice) {
+      // 有設備正在傳輸，啟動或繼續輪詢
+      if (!pollingIntervalRef.current) {
+        pollingIntervalRef.current = setInterval(() => {
+          loadDevices(false);
+        }, 5000);
+        console.log('🔄 檢測到設備正在傳輸，開始每5秒自動刷新');
+      }
+    } else {
+      // 沒有設備在傳輸，停止輪詢
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+        console.log('✅ 所有設備傳輸完成，停止自動刷新');
+      }
+    }
     
     // 清理函數
     return () => {
       if (pollingIntervalRef.current) {
         clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
       }
     };
-  }, []);
+  }, [devices]);
 
   // 綁定裝置
   const handleBindDevice = async () => {
@@ -188,7 +218,7 @@ export default function DeviceManager() {
         setStatusMessage('裝置綁定成功！');
         setShowBindModal(false);
         setBindForm({ activationCode: '', deviceName: '' });
-        loadDevices(); // 重新載入裝置列表
+        loadDevices(false); // 重新載入裝置列表
       } else {
         setStatusMessage(result.message || '綁定失敗');
       }
@@ -225,7 +255,7 @@ export default function DeviceManager() {
         setStatusMessage('裝置設定更新成功！');
         setShowEditModal(false);
         setEditingDevice(null);
-        loadDevices(); // 重新載入裝置列表
+        loadDevices(false); // 重新載入裝置列表
       } else {
         setStatusMessage(result.message || '更新失敗');
       }
@@ -244,7 +274,7 @@ export default function DeviceManager() {
       
       if (result.success) {
         setStatusMessage('裝置已解除綁定');
-        loadDevices(); // 重新載入裝置列表
+        loadDevices(false); // 重新載入裝置列表
       } else {
         setStatusMessage(result.message || '解除綁定失敗');
       }
@@ -261,7 +291,7 @@ export default function DeviceManager() {
       
       if (result.success) {
         setStatusMessage(`需要更新：${result.needUpdate ? '是' : '否'}，刷新間隔：${result.refreshInterval || 300}秒`);
-        loadDevices(); // 重新載入裝置列表
+        loadDevices(false); // 重新載入裝置列表
       } else {
         setStatusMessage(result.message || '查詢狀態失敗');
       }
@@ -453,10 +483,11 @@ export default function DeviceManager() {
             
             <div className="flex items-center space-x-3">
               <button
-                onClick={loadDevices}
-                className="flex items-center space-x-2 px-4 py-2 text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+                onClick={() => loadDevices(false)}
+                className="flex items-center space-x-2 px-4 py-2 text-slate-600 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={isLoading}
               >
-                <RefreshCw className="w-4 h-4" />
+                <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
                 <span>重新載入</span>
               </button>
               <button
@@ -488,7 +519,7 @@ export default function DeviceManager() {
             </span>
           </div>
 
-          {isLoading ? (
+          {isInitialLoading ? (
             <div className="flex items-center justify-center py-12">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
               <span className="ml-3 text-slate-600">載入中...</span>

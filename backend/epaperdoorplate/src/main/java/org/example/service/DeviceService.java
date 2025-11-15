@@ -690,8 +690,17 @@ public class DeviceService {
             deviceMap.put("updatedAt", device.getUpdatedAt());
             deviceMap.put("createdAt", device.getCreatedAt());
             deviceMap.put("currentTemplateId", device.getCurrentTemplateId());
-            // 添加傳輸狀態
-            deviceMap.put("isTransferring", isDeviceTransferring(device.getDeviceId()));
+            
+            // 檢查傳輸狀態：如果 needUpdate 為 false，說明傳輸已完成，清除傳輸狀態
+            boolean isTransferring = isDeviceTransferring(device.getDeviceId());
+            // 如果設備不需要更新，但還在傳輸狀態中，說明傳輸已完成，清除狀態
+            boolean responseNeedUpdate = device.isForceNoUpdate() ? false : device.isNeedUpdate();
+            if (!responseNeedUpdate && isTransferring) {
+                clearTransferringStatus(device.getDeviceId());
+                isTransferring = false;
+                System.out.println("✅ 設備傳輸已完成（needUpdate=false），清除傳輸狀態: " + device.getDeviceId());
+            }
+            deviceMap.put("isTransferring", isTransferring);
             devicesWithStatus.add(deviceMap);
         }
         
