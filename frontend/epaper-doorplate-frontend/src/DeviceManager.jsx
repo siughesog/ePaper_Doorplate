@@ -171,10 +171,12 @@ export default function DeviceManager() {
     if (hasTransferringDevice) {
       // 有設備正在傳輸，啟動或繼續輪詢
       if (!pollingIntervalRef.current) {
+        // 立即刷新一次，然後開始輪詢
+        loadDevices(false);
         pollingIntervalRef.current = setInterval(() => {
           loadDevices(false);
         }, 5000);
-        console.log('🔄 檢測到設備正在傳輸，開始每5秒自動刷新');
+        console.log('🔄 檢測到設備正在傳輸，立即刷新並開始每5秒自動刷新');
       }
     } else {
       // 沒有設備在傳輸，停止輪詢

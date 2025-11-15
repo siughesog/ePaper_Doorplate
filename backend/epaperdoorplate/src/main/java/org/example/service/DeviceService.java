@@ -421,16 +421,17 @@ public class DeviceService {
             System.out.println("   - 已記錄最後使用的刷新間隔: " + device.getLastRefreshInterval() + "秒");
             
             // 如果設備之前正在傳輸，且現在 needUpdate 為 false，說明傳輸已完成，清除傳輸狀態
-            // 注意：只有在設備再次請求時（不是第一次請求數據時）才清除
-            // 因為第一次請求時，即使設置了 needUpdate=false，傳輸可能還在進行中
+            // 注意：這是設備再次請求（不是第一次請求數據時），說明設備已經處理完上次的數據
             if (transferringDevices.containsKey(deviceId) && !device.isNeedUpdate()) {
-                // 檢查是否是剛開始傳輸（剛標記的傳輸狀態不應該立即清除）
-                // 如果傳輸時間超過10秒，且 needUpdate=false，才認為傳輸已完成
+                // 檢查傳輸開始時間，如果是剛標記的（5秒內），可能是第一次請求，不立即清除
+                // 如果超過5秒，說明設備已經有時間接收數據，且 needUpdate=false，可以清除
                 long transferStartTime = transferringDevices.get(deviceId);
                 long elapsed = System.currentTimeMillis() - transferStartTime;
-                if (elapsed > 10000) { // 至少10秒後才清除（給設備足夠時間完成傳輸）
+                if (elapsed > 5000) { // 至少5秒後才清除（給設備足夠時間開始接收數據）
                     clearTransferringStatus(deviceId);
-                    System.out.println("✅ 設備傳輸已完成（needUpdate=false 且已超過10秒），清除傳輸狀態: " + deviceId);
+                    System.out.println("✅ 設備傳輸已完成（needUpdate=false 且已超過5秒），清除傳輸狀態: " + deviceId);
+                } else {
+                    System.out.println("⏳ 設備剛開始傳輸（" + elapsed + "ms），暫不清除傳輸狀態: " + deviceId);
                 }
             }
         }
