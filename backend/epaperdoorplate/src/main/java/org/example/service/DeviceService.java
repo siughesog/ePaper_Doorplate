@@ -421,15 +421,15 @@ public class DeviceService {
             System.out.println("   - 已記錄最後使用的刷新間隔: " + device.getLastRefreshInterval() + "秒");
             
             // 如果設備之前正在傳輸，且現在 needUpdate 為 false，說明傳輸已完成，清除傳輸狀態
-            // 注意：這是設備再次請求（不是第一次請求數據時），說明設備已經處理完上次的數據
+            // 這是設備再次請求（不是第一次請求數據時），說明設備已經處理完上次的數據
             if (transferringDevices.containsKey(deviceId) && !device.isNeedUpdate()) {
-                // 檢查傳輸開始時間，如果是剛標記的（5秒內），可能是第一次請求，不立即清除
-                // 如果超過5秒，說明設備已經有時間接收數據，且 needUpdate=false，可以清除
+                // 檢查傳輸開始時間，如果是剛標記的（3秒內），可能是第一次請求，不立即清除
+                // 如果超過3秒，說明設備已經有時間接收數據，且 needUpdate=false，立即清除
                 long transferStartTime = transferringDevices.get(deviceId);
                 long elapsed = System.currentTimeMillis() - transferStartTime;
-                if (elapsed > 5000) { // 至少5秒後才清除（給設備足夠時間開始接收數據）
+                if (elapsed > 3000) { // 至少3秒後才清除（給設備足夠時間開始接收數據）
                     clearTransferringStatus(deviceId);
-                    System.out.println("✅ 設備傳輸已完成（needUpdate=false 且已超過5秒），清除傳輸狀態: " + deviceId);
+                    System.out.println("✅ 設備傳輸已完成（needUpdate=false 且已超過3秒），清除傳輸狀態: " + deviceId);
                 } else {
                     System.out.println("⏳ 設備剛開始傳輸（" + elapsed + "ms），暫不清除傳輸狀態: " + deviceId);
                 }
@@ -701,9 +701,22 @@ public class DeviceService {
             deviceMap.put("createdAt", device.getCreatedAt());
             deviceMap.put("currentTemplateId", device.getCurrentTemplateId());
             
-            // 檢查傳輸狀態（前端查詢時只讀取狀態，不清除）
-            // 傳輸狀態的清除只在設備請求時進行（見 handleDeviceStatus 方法）
+            // 檢查傳輸狀態
             boolean isTransferring = isDeviceTransferring(device.getDeviceId());
+            
+            // 如果設備不需要更新（needUpdate=false），且傳輸狀態存在超過5秒，說明傳輸已完成，清除狀態
+            // 這樣可以避免設備完成傳輸後，但還沒再次請求時，前端一直顯示"正在傳輸"
+            boolean responseNeedUpdate = device.isForceNoUpdate() ? false : device.isNeedUpdate();
+            if (!responseNeedUpdate && isTransferring) {
+                long transferStartTime = transferringDevices.get(device.getDeviceId());
+                long elapsed = System.currentTimeMillis() - transferStartTime;
+                if (elapsed > 5000) { // 5秒後，如果 needUpdate=false，認為傳輸已完成
+                    clearTransferringStatus(device.getDeviceId());
+                    isTransferring = false;
+                    System.out.println("✅ 前端查詢：設備傳輸已完成（needUpdate=false 且已超過5秒），清除傳輸狀態: " + device.getDeviceId());
+                }
+            }
+            
             deviceMap.put("isTransferring", isTransferring);
             devicesWithStatus.add(deviceMap);
         }
