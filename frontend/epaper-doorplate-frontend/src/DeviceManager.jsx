@@ -435,7 +435,7 @@ export default function DeviceManager() {
         <div className="mb-4 p-3 bg-blue-100 border border-blue-300 rounded-lg flex items-center space-x-2">
           <Upload className="w-5 h-5 text-blue-600 animate-pulse" />
           <div className="flex-1">
-            <p className="text-sm font-medium text-blue-800">正在傳送資料給設備...</p>
+            <p className="text-sm font-medium text-blue-800">設備更新中......</p>
           </div>
         </div>
       )}

@@ -1637,6 +1637,8 @@ void callDeviceStatusAPI(String deviceID) {
     http.end();
     
     Serial.println("ℹ️ 無需更新或無 binData");
+    // 即使不需要更新，也發送渲染完成消息（表示設備已檢查並確認無需更新）
+    sendRenderCompleteMessage(deviceID, "success", "");
   }
 
   // 更新 savedConfig 與持久化
