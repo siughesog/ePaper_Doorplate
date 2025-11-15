@@ -176,10 +176,10 @@ export default function DeviceManager() {
     pollingIntervalRef.current = setInterval(() => {
       loadDevices(false);
       
-      // 如果1分鐘內沒有檢測到傳輸，停止輪詢
+      // 如果10秒內沒有檢測到傳輸，停止輪詢
       if (pollingStartTimeRef.current) {
         const elapsed = Date.now() - pollingStartTimeRef.current;
-        if (elapsed > 60000) { // 1分鐘 = 60000毫秒
+        if (elapsed > 10000) { // 10秒 = 10000毫秒
           // 使用 setTimeout 來檢查，避免在 loadDevices 的回調中檢查
           setTimeout(() => {
             if (pollingStartTimeRef.current) {
@@ -190,7 +190,7 @@ export default function DeviceManager() {
                   if (result.success) {
                     const hasTransferring = result.devices?.some(device => device.isTransferring) || false;
                     if (!hasTransferring) {
-                      console.log('⏱️ 1分鐘內沒有檢測到傳輸，停止輪詢');
+                      console.log('⏱️ 10秒內沒有檢測到傳輸，停止輪詢');
                       stopPolling();
                     }
                   }
@@ -201,7 +201,7 @@ export default function DeviceManager() {
         }
       }
     }, 2000);
-    console.log('🔄 開始每2秒自動刷新（最多1分鐘）');
+    console.log('🔄 開始每2秒自動刷新（最多10秒）');
   }, []);
 
   // 停止輪詢
@@ -253,11 +253,11 @@ export default function DeviceManager() {
       startPolling();
     }
     
-    // 如果沒有設備在傳輸，且輪詢超過1分鐘，停止輪詢
+    // 如果沒有設備在傳輸，且輪詢超過10秒，停止輪詢
     if (!hasTransferringDevice && pollingIntervalRef.current && pollingStartTimeRef.current) {
       const elapsed = Date.now() - pollingStartTimeRef.current;
-      if (elapsed > 60000) {
-        console.log('⏱️ 沒有設備在傳輸且已超過1分鐘，停止輪詢');
+      if (elapsed > 10000) {
+        console.log('⏱️ 沒有設備在傳輸且已超過10秒，停止輪詢');
         stopPolling();
       }
     }
