@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class DeviceService {
@@ -41,6 +42,9 @@ public class DeviceService {
     private DoorplateLayoutService layoutService;
 
     private static final SecureRandom RANDOM = new SecureRandom();
+    
+    // 跟踪正在传输数据的设备（deviceId -> 开始传输的时间戳）
+    private final Map<String, Long> transferringDevices = new ConcurrentHashMap<>();
 
     public Map<String, Object> activate(String uniqueId) {
         System.out.println("\n========== 設備激活API ==========");
@@ -132,7 +136,7 @@ public class DeviceService {
                 System.out.println("   - activation_code: " + validCode.getActivationCode());
                 System.out.println("   - 共找到 " + existingCodes.size() + " 個激活碼記錄");
                 
-                resp.put("success", true);
+                    resp.put("success", true);
                 resp.put("alreadyActivated", false);
                 resp.put("activation_code", validCode.getActivationCode());
                 // 激活碼不過期，返回null
@@ -415,6 +419,11 @@ public class DeviceService {
             deviceRepository.save(device);
             System.out.println("   - 已更新最後更新時間: " + device.getUpdatedAt());
             System.out.println("   - 已記錄最後使用的刷新間隔: " + device.getLastRefreshInterval() + "秒");
+            
+            // 如果設備之前正在傳輸，且現在 needUpdate 為 false，說明傳輸已完成，清除傳輸狀態
+            if (transferringDevices.containsKey(deviceId) && !device.isNeedUpdate()) {
+                clearTransferringStatus(deviceId);
+            }
         }
 
         resp.put("success", true);
@@ -499,6 +508,12 @@ public class DeviceService {
                 byte[] binData = result.getBinData();
                 
                 if (binData != null && binData.length > 0) {
+                    // 標記設備正在傳輸（僅在設備請求時標記，前端查詢不標記）
+                    if (isDeviceRequest) {
+                        transferringDevices.put(deviceId, System.currentTimeMillis());
+                        System.out.println("📤 標記設備為正在傳輸: " + deviceId);
+                    }
+                    
                     String base64Data = java.util.Base64.getEncoder().encodeToString(binData);
                     resp.put("binData", base64Data);
                     resp.put("binSize", binData.length);
@@ -623,6 +638,30 @@ public class DeviceService {
         return sb.toString();
     }
 
+    // 查詢設備是否正在傳輸數據
+    public boolean isDeviceTransferring(String deviceId) {
+        if (!transferringDevices.containsKey(deviceId)) {
+            return false;
+        }
+        
+        // 檢查傳輸是否超時（超過5分鐘認為已超時，自動清除）
+        long startTime = transferringDevices.get(deviceId);
+        long elapsed = System.currentTimeMillis() - startTime;
+        if (elapsed > 5 * 60 * 1000) { // 5分鐘超時
+            transferringDevices.remove(deviceId);
+            System.out.println("⏱️ 設備傳輸超時，自動清除: " + deviceId);
+            return false;
+        }
+        
+        return true;
+    }
+    
+    // 清除設備的傳輸狀態（當傳輸完成時調用）
+    public void clearTransferringStatus(String deviceId) {
+        transferringDevices.remove(deviceId);
+        System.out.println("✅ 清除設備傳輸狀態: " + deviceId);
+    }
+
     public Map<String, Object> getUserDevices(String username) {
         Map<String, Object> resp = new HashMap<>();
         User user = userRepository.findByUsername(username).orElse(null);
@@ -635,12 +674,30 @@ public class DeviceService {
         // 獲取用戶的所有已綁定且未解除綁定的設備
         java.util.List<Device> userDevices = deviceRepository.findByUserIdAndUnboundFalse(user.getId());
         
-        // 確保設備列表中的每個設備都有正確的激活狀態
-        // Device對象會通過Jackson自動序列化，@JsonProperty會確保isActivated字段正確映射
+        // 為每個設備添加傳輸狀態
+        List<Map<String, Object>> devicesWithStatus = new java.util.ArrayList<>();
+        for (Device device : userDevices) {
+            Map<String, Object> deviceMap = new HashMap<>();
+            deviceMap.put("id", device.getId());
+            deviceMap.put("deviceId", device.getDeviceId());
+            deviceMap.put("deviceName", device.getDeviceName());
+            deviceMap.put("uniqueId", device.getUniqueId());
+            deviceMap.put("isActivated", device.isActivated());
+            deviceMap.put("refreshInterval", device.getRefreshInterval());
+            deviceMap.put("lastRefreshInterval", device.getLastRefreshInterval());
+            deviceMap.put("needUpdate", device.isNeedUpdate());
+            deviceMap.put("forceNoUpdate", device.isForceNoUpdate());
+            deviceMap.put("updatedAt", device.getUpdatedAt());
+            deviceMap.put("createdAt", device.getCreatedAt());
+            deviceMap.put("currentTemplateId", device.getCurrentTemplateId());
+            // 添加傳輸狀態
+            deviceMap.put("isTransferring", isDeviceTransferring(device.getDeviceId()));
+            devicesWithStatus.add(deviceMap);
+        }
         
         resp.put("success", true);
-        resp.put("devices", userDevices);
-        resp.put("count", userDevices.size());
+        resp.put("devices", devicesWithStatus);
+        resp.put("count", devicesWithStatus.size());
         return resp;
     }
 

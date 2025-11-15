@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Smartphone, 
   Plus, 
@@ -9,7 +9,8 @@ import {
   Wifi,
   WifiOff,
   Clock,
-  User
+  User,
+  Upload
 } from 'lucide-react';
 import apiService from './services/api';
 
@@ -34,6 +35,7 @@ export default function DeviceManager() {
   });
   
   const [statusMessage, setStatusMessage] = useState('');
+  const pollingIntervalRef = useRef(null);
 
   // 檢查設備是否離線
   const isDeviceOffline = (device) => {
@@ -148,6 +150,18 @@ export default function DeviceManager() {
 
   useEffect(() => {
     loadDevices();
+    
+    // 設置輪詢機制，每5秒檢查一次傳輸狀態
+    pollingIntervalRef.current = setInterval(() => {
+      loadDevices();
+    }, 5000);
+    
+    // 清理函數
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+    };
   }, []);
 
   // 綁定裝置
@@ -270,11 +284,22 @@ export default function DeviceManager() {
 
   const DeviceCard = ({ device }) => {
     const offline = isDeviceOffline(device);
+    const isTransferring = device.isTransferring || false;
     
     return (
-    <div className={`bg-white rounded-xl shadow-lg border p-6 hover:shadow-xl transition-all duration-300 ${offline ? 'border-red-300 bg-red-50' : 'border-slate-200'}`}>
+    <div className={`bg-white rounded-xl shadow-lg border p-6 hover:shadow-xl transition-all duration-300 ${offline ? 'border-red-300 bg-red-50' : isTransferring ? 'border-blue-300 bg-blue-50' : 'border-slate-200'}`}>
+      {/* 正在傳輸提示 */}
+      {isTransferring && (
+        <div className="mb-4 p-3 bg-blue-100 border border-blue-300 rounded-lg flex items-center space-x-2">
+          <Upload className="w-5 h-5 text-blue-600 animate-pulse" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-blue-800">正在傳送資料給設備...</p>
+          </div>
+        </div>
+      )}
+      
       {/* 離線警告提示 */}
-      {offline && (
+      {offline && !isTransferring && (
         <div className="mb-4 p-3 bg-red-100 border border-red-300 rounded-lg flex items-center space-x-2">
           <WifiOff className="w-5 h-5 text-red-600" />
           <div className="flex-1">
