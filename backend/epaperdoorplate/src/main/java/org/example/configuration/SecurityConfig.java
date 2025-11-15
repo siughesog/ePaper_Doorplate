@@ -82,6 +82,7 @@ public class SecurityConfig {
                 .requestMatchers("/images/**").permitAll()
                 .requestMatchers("/device/activate").permitAll()
                 .requestMatchers("/device/status").permitAll()
+                .requestMatchers("/device/render-complete").permitAll()
                 .requestMatchers("/device/bind").authenticated()
                 .requestMatchers("/device/unbind").authenticated()
                 .requestMatchers("/device/update").authenticated()
