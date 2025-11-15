@@ -719,13 +719,15 @@ public class DeviceService {
     public Map<String, Object> handleRenderComplete(String deviceId, String status, String errorMessage) {
         Map<String, Object> resp = new HashMap<>();
         
+        // 如果設備不在傳輸狀態中，創建一個新的狀態記錄（可能是超時清除或服務重啟）
+        TransferStatusInfo statusInfo;
         if (!transferringDevices.containsKey(deviceId)) {
-            resp.put("success", false);
-            resp.put("message", "device not in transferring state");
-            return resp;
+            System.out.println("⚠️ 設備不在傳輸狀態中，創建新狀態記錄: " + deviceId);
+            statusInfo = new TransferStatusInfo(TransferStatus.IN_PROGRESS, System.currentTimeMillis());
+            transferringDevices.put(deviceId, statusInfo);
+        } else {
+            statusInfo = transferringDevices.get(deviceId);
         }
-        
-        TransferStatusInfo statusInfo = transferringDevices.get(deviceId);
         
         if ("success".equalsIgnoreCase(status)) {
             statusInfo.setStatus(TransferStatus.SUCCESS);
