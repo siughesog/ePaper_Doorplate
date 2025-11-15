@@ -445,7 +445,7 @@ export default function DeviceManager() {
         <div className="mb-4 p-3 bg-green-100 border border-green-300 rounded-lg flex items-center space-x-2">
           <CheckCircle className="w-5 h-5 text-green-600" />
           <div className="flex-1">
-            <p className="text-sm font-medium text-green-800">✅ 更新成功</p>
+            <p className="text-sm font-medium text-green-800">門牌更新成功</p>
           </div>
         </div>
       )}
