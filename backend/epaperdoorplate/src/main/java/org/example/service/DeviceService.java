@@ -778,11 +778,19 @@ public class DeviceService {
             
             // 檢查傳輸狀態
             boolean isTransferring = isDeviceTransferring(device.getDeviceId());
+            TransferStatus transferStatus = getDeviceTransferStatus(device.getDeviceId());
+            String transferErrorMessage = getDeviceTransferErrorMessage(device.getDeviceId());
             
             // 注意：現在不再在這裡清除傳輸狀態，因為 ESP32 會主動發送 render-complete 消息
             // 只有在超時時才自動清除（在 isDeviceTransferring 中處理）
             
             deviceMap.put("isTransferring", isTransferring);
+            if (transferStatus != null) {
+                deviceMap.put("transferStatus", transferStatus.name()); // IN_PROGRESS, SUCCESS, FAILED
+                if (transferErrorMessage != null) {
+                    deviceMap.put("transferErrorMessage", transferErrorMessage);
+                }
+            }
             devicesWithStatus.add(deviceMap);
         }
         
