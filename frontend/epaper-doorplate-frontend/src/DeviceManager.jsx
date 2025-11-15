@@ -176,32 +176,16 @@ export default function DeviceManager() {
     pollingStartTimeRef.current = Date.now();
     loadDevices(false);
     pollingIntervalRef.current = setInterval(() => {
-      loadDevices(false);
+      const elapsed = Date.now() - (pollingStartTimeRef.current || Date.now());
       
-      // 如果10秒內沒有檢測到傳輸，停止輪詢
-      if (pollingStartTimeRef.current) {
-        const elapsed = Date.now() - pollingStartTimeRef.current;
-        if (elapsed > 10000) { // 10秒 = 10000毫秒
-          // 使用 setTimeout 來檢查，避免在 loadDevices 的回調中檢查
-          setTimeout(() => {
-            if (pollingStartTimeRef.current) {
-              // 重新獲取最新的設備列表來檢查
-              const username = localStorage.getItem('username');
-              if (username) {
-                apiService.getUserDevices(username).then(result => {
-                  if (result.success) {
-                    const hasTransferring = result.devices?.some(device => device.isTransferring) || false;
-                    if (!hasTransferring) {
-                      console.log('⏱️ 10秒內沒有檢測到傳輸，停止輪詢');
-                      stopPolling();
-                    }
-                  }
-                });
-              }
-            }
-          }, 100);
-        }
+      // 如果超過10秒，強制停止輪詢
+      if (elapsed > 10000) {
+        console.log('⏱️ 已超過10秒，強制停止輪詢');
+        stopPolling();
+        return;
       }
+      
+      loadDevices(false);
     }, 2000);
     console.log('🔄 開始每2秒自動刷新（最多10秒）');
   }, []);
@@ -274,10 +258,10 @@ export default function DeviceManager() {
     }
     
     // 如果沒有設備在傳輸，且輪詢超過10秒，停止輪詢
-    if (!hasTransferringDevice && !hasCompletedDevice && pollingIntervalRef.current && pollingStartTimeRef.current) {
+    if (pollingIntervalRef.current && pollingStartTimeRef.current) {
       const elapsed = Date.now() - pollingStartTimeRef.current;
       if (elapsed > 10000) {
-        console.log('⏱️ 沒有設備在傳輸且已超過10秒，停止輪詢');
+        console.log('⏱️ 已超過10秒，停止輪詢');
         stopPolling();
       }
     }
