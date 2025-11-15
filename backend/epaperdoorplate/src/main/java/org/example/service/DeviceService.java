@@ -421,8 +421,17 @@ public class DeviceService {
             System.out.println("   - 已記錄最後使用的刷新間隔: " + device.getLastRefreshInterval() + "秒");
             
             // 如果設備之前正在傳輸，且現在 needUpdate 為 false，說明傳輸已完成，清除傳輸狀態
+            // 注意：只有在設備再次請求時（不是第一次請求數據時）才清除
+            // 因為第一次請求時，即使設置了 needUpdate=false，傳輸可能還在進行中
             if (transferringDevices.containsKey(deviceId) && !device.isNeedUpdate()) {
-                clearTransferringStatus(deviceId);
+                // 檢查是否是剛開始傳輸（剛標記的傳輸狀態不應該立即清除）
+                // 如果傳輸時間超過10秒，且 needUpdate=false，才認為傳輸已完成
+                long transferStartTime = transferringDevices.get(deviceId);
+                long elapsed = System.currentTimeMillis() - transferStartTime;
+                if (elapsed > 10000) { // 至少10秒後才清除（給設備足夠時間完成傳輸）
+                    clearTransferringStatus(deviceId);
+                    System.out.println("✅ 設備傳輸已完成（needUpdate=false 且已超過10秒），清除傳輸狀態: " + deviceId);
+                }
             }
         }
 
@@ -691,15 +700,9 @@ public class DeviceService {
             deviceMap.put("createdAt", device.getCreatedAt());
             deviceMap.put("currentTemplateId", device.getCurrentTemplateId());
             
-            // 檢查傳輸狀態：如果 needUpdate 為 false，說明傳輸已完成，清除傳輸狀態
+            // 檢查傳輸狀態（前端查詢時只讀取狀態，不清除）
+            // 傳輸狀態的清除只在設備請求時進行（見 handleDeviceStatus 方法）
             boolean isTransferring = isDeviceTransferring(device.getDeviceId());
-            // 如果設備不需要更新，但還在傳輸狀態中，說明傳輸已完成，清除狀態
-            boolean responseNeedUpdate = device.isForceNoUpdate() ? false : device.isNeedUpdate();
-            if (!responseNeedUpdate && isTransferring) {
-                clearTransferringStatus(device.getDeviceId());
-                isTransferring = false;
-                System.out.println("✅ 設備傳輸已完成（needUpdate=false），清除傳輸狀態: " + device.getDeviceId());
-            }
             deviceMap.put("isTransferring", isTransferring);
             devicesWithStatus.add(deviceMap);
         }
