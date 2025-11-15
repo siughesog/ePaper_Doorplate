@@ -190,6 +190,12 @@ export default function DeviceManager() {
           pollingIntervalRef.current = null;
           pollingStartTimeRef.current = null;
           console.log('✅ 已停止輪詢');
+          // 最後一次查詢設備狀態並更新UI
+          loadDevices(false).then(() => {
+            setDevices(prevDevices => [...prevDevices]);
+          }).catch(() => {
+            setDevices(prevDevices => [...prevDevices]);
+          });
         }
         return;
       }
@@ -208,7 +214,10 @@ export default function DeviceManager() {
       console.log('✅ 停止自動刷新');
       // 停止輪詢前，再查詢一次設備狀態以確保UI更新
       loadDevices(false).then(() => {
-        // 強制觸發重新渲染以更新按鈕狀態
+        // 強制觸發重新渲染以更新按鈕狀態和設備狀態
+        setDevices(prevDevices => [...prevDevices]);
+      }).catch(() => {
+        // 即使失敗也要更新UI狀態
         setDevices(prevDevices => [...prevDevices]);
       });
     }
@@ -272,6 +281,8 @@ export default function DeviceManager() {
       // 先查詢一次設備狀態以確保UI更新，然後停止輪詢
       loadDevices(false).then(() => {
         stopPolling();
+      }).catch(() => {
+        stopPolling();
       });
     }
     
@@ -280,7 +291,12 @@ export default function DeviceManager() {
       const elapsed = Date.now() - pollingStartTimeRef.current;
       if (elapsed > 10000) {
         console.log('⏱️ 已超過10秒，停止輪詢');
-        stopPolling();
+        // 先查詢一次設備狀態以確保UI更新
+        loadDevices(false).then(() => {
+          stopPolling();
+        }).catch(() => {
+          stopPolling();
+        });
       }
     }
   }, [devices, startPolling, stopPolling]);
