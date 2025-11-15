@@ -173,22 +173,29 @@ export default function DeviceManager() {
       return; // 已經在輪詢中
     }
 
-    pollingStartTimeRef.current = Date.now();
+    const startTime = Date.now();
+    pollingStartTimeRef.current = startTime;
     loadDevices(false);
+    
     pollingIntervalRef.current = setInterval(() => {
-      const elapsed = Date.now() - (pollingStartTimeRef.current || Date.now());
+      const elapsed = Date.now() - startTime;
       
       // 如果超過10秒，強制停止輪詢
       if (elapsed > 10000) {
         console.log('⏱️ 已超過10秒，強制停止輪詢');
-        stopPolling();
+        if (pollingIntervalRef.current) {
+          clearInterval(pollingIntervalRef.current);
+          pollingIntervalRef.current = null;
+          pollingStartTimeRef.current = null;
+          console.log('✅ 已停止輪詢');
+        }
         return;
       }
       
       loadDevices(false);
     }, 2000);
     console.log('🔄 開始每2秒自動刷新（最多10秒）');
-  }, []);
+  }, [loadDevices]);
 
   // 停止輪詢
   const stopPolling = useCallback(() => {
