@@ -37,6 +37,7 @@ export default function DeviceManager() {
   
   const [statusMessage, setStatusMessage] = useState('');
   const pollingIntervalRef = useRef(null);
+  const previousTransferringStateRef = useRef(new Map()); // 跟踪每个设备之前的传输状态
 
   // 檢查設備是否離線
   const isDeviceOffline = (device) => {
@@ -163,27 +164,49 @@ export default function DeviceManager() {
     loadDevices(true);
   }, []);
 
-  // 動態輪詢機制：只在有設備正在傳輸時才頻繁刷新
+  // 動態輪詢機制：當設備需要更新或正在傳輸時頻繁刷新
   useEffect(() => {
-    // 檢查是否有設備正在傳輸
+    // 檢查是否有設備需要更新或正在傳輸
     const hasTransferringDevice = devices.some(device => device.isTransferring);
+    const hasDeviceNeedUpdate = devices.some(device => {
+      const responseNeedUpdate = device.forceNoUpdate ? false : device.needUpdate;
+      return responseNeedUpdate;
+    });
     
-    if (hasTransferringDevice) {
-      // 有設備正在傳輸，啟動或繼續輪詢
+    // 檢測傳輸狀態變化
+    devices.forEach(device => {
+      const deviceId = device.deviceId;
+      const wasTransferring = previousTransferringStateRef.current.get(deviceId) || false;
+      const isTransferring = device.isTransferring || false;
+      
+      if (!wasTransferring && isTransferring) {
+        // 傳輸剛開始
+        console.log('🔄 設備開始傳輸:', deviceId);
+      } else if (wasTransferring && !isTransferring) {
+        // 傳輸剛完成
+        console.log('✅ 設備傳輸完成:', deviceId);
+      }
+      
+      // 更新狀態
+      previousTransferringStateRef.current.set(deviceId, isTransferring);
+    });
+    
+    if (hasTransferringDevice || hasDeviceNeedUpdate) {
+      // 有設備正在傳輸或需要更新，啟動或繼續輪詢
       if (!pollingIntervalRef.current) {
-        // 立即刷新一次，然後開始輪詢
+        // 立即刷新一次，然後開始更頻繁的輪詢（每2秒）
         loadDevices(false);
         pollingIntervalRef.current = setInterval(() => {
           loadDevices(false);
-        }, 5000);
-        console.log('🔄 檢測到設備正在傳輸，立即刷新並開始每5秒自動刷新');
+        }, 2000); // 改為每2秒刷新一次，以便及時檢測狀態變化
+        console.log('🔄 檢測到設備需要更新或正在傳輸，立即刷新並開始每2秒自動刷新');
       }
     } else {
-      // 沒有設備在傳輸，停止輪詢
+      // 沒有設備在傳輸或需要更新，停止輪詢
       if (pollingIntervalRef.current) {
         clearInterval(pollingIntervalRef.current);
         pollingIntervalRef.current = null;
-        console.log('✅ 所有設備傳輸完成，停止自動刷新');
+        console.log('✅ 所有設備傳輸完成且無需更新，停止自動刷新');
       }
     }
     
