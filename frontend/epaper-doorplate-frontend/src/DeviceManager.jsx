@@ -211,6 +211,8 @@ export default function DeviceManager() {
       pollingIntervalRef.current = null;
       pollingStartTimeRef.current = null;
       console.log('✅ 停止自動刷新');
+      // 強制觸發重新渲染以更新按鈕狀態
+      setDevices(prevDevices => [...prevDevices]);
     }
   }, []);
 
