@@ -139,7 +139,7 @@ export default function DeviceManager() {
       const username = localStorage.getItem('username');
       if (!username) {
         setStatusMessage('請先登入');
-        return;
+        return Promise.resolve();
       }
 
       const result = await apiService.getUserDevices(username);
@@ -149,10 +149,12 @@ export default function DeviceManager() {
         setStatusMessage(result.message || '載入裝置列表失敗');
         setDevices([]);
       }
+      return Promise.resolve();
     } catch (error) {
       console.error('載入裝置列表失敗:', error);
       setStatusMessage('載入裝置列表失敗');
       setDevices([]);
+      return Promise.reject(error);
     } finally {
       if (isInitial) {
         setIsInitialLoading(false);
@@ -204,10 +206,13 @@ export default function DeviceManager() {
       pollingIntervalRef.current = null;
       pollingStartTimeRef.current = null;
       console.log('✅ 停止自動刷新');
-      // 強制觸發重新渲染以更新按鈕狀態
-      setDevices(prevDevices => [...prevDevices]);
+      // 停止輪詢前，再查詢一次設備狀態以確保UI更新
+      loadDevices(false).then(() => {
+        // 強制觸發重新渲染以更新按鈕狀態
+        setDevices(prevDevices => [...prevDevices]);
+      });
     }
-  }, []);
+  }, [loadDevices]);
 
   // 動態輪詢機制：檢測傳輸狀態變化
   useEffect(() => {
@@ -238,7 +243,10 @@ export default function DeviceManager() {
         console.log(`✅ 設備渲染完成: ${deviceId}, 狀態: ${transferStatus}`);
         if (pollingIntervalRef.current) {
           console.log('🛑 渲染完成，自動停止輪詢');
-          stopPolling();
+          // 先查詢一次設備狀態以確保UI更新，然後停止輪詢
+          loadDevices(false).then(() => {
+            stopPolling();
+          });
         }
       } else if (wasTransferring && !isTransferring && !transferStatus) {
         // 傳輸剛完成但沒有狀態（舊邏輯，保留兼容性）
@@ -261,7 +269,10 @@ export default function DeviceManager() {
     // 如果有設備已完成（SUCCESS/FAILED），停止輪詢
     if (hasCompletedDevice && pollingIntervalRef.current) {
       console.log('🛑 檢測到設備已完成渲染，停止輪詢');
-      stopPolling();
+      // 先查詢一次設備狀態以確保UI更新，然後停止輪詢
+      loadDevices(false).then(() => {
+        stopPolling();
+      });
     }
     
     // 如果沒有設備在傳輸，且輪詢超過10秒，停止輪詢
