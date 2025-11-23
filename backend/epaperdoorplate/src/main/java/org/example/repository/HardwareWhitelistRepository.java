@@ -27,3 +27,9 @@ public interface HardwareWhitelistRepository extends MongoRepository<HardwareWhi
 
 
 
+
+
+
+
+
+
